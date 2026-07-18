@@ -26,6 +26,10 @@ CREATE TABLE IF NOT EXISTS music_profiles (
 -- Enable Row Level Security (RLS)
 ALTER TABLE music_profiles ENABLE ROW LEVEL SECURITY;
 
+-- Drop existing policies if they exist to prevent duplication errors
+DROP POLICY IF EXISTS "Users can view their own music profile" ON music_profiles;
+DROP POLICY IF EXISTS "Users can insert or update their own music profile" ON music_profiles;
+
 -- Create policies to secure user profiles
 CREATE POLICY "Users can view their own music profile"
     ON music_profiles FOR SELECT
@@ -35,3 +39,4 @@ CREATE POLICY "Users can insert or update their own music profile"
     ON music_profiles FOR ALL
     USING (auth.uid() = user_id)
     WITH CHECK (auth.uid() = user_id);
+
