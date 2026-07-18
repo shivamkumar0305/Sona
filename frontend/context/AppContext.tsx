@@ -54,7 +54,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [profile, setProfile] = useState<MusicDNAProfile | null>(null)
   const [isRefreshingDNA, setIsRefreshingDNA] = useState(false)
 
-  // Hold OAuth provider token inside ref
+  // Hold OAuth provider token inside ref and localStorage to persist across refreshes
   const providerTokenRef = useRef<string | null>(null)
   const isSupabaseConfigured = !!supabase
 
@@ -65,7 +65,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     // Get current session on load
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) {
-        providerTokenRef.current = session.provider_token || null
+        if (session.provider_token) {
+          providerTokenRef.current = session.provider_token
+          localStorage.setItem('sona_spotify_token', session.provider_token)
+        } else {
+          providerTokenRef.current = localStorage.getItem('sona_spotify_token')
+        }
         setUser({
           name: session.user.user_metadata.full_name || 'Spotify User',
           email: session.user.email || '',
@@ -78,7 +83,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (session) {
-        providerTokenRef.current = session.provider_token || null
+        if (session.provider_token) {
+          providerTokenRef.current = session.provider_token
+          localStorage.setItem('sona_spotify_token', session.provider_token)
+        } else {
+          providerTokenRef.current = localStorage.getItem('sona_spotify_token')
+        }
         setUser({
           name: session.user.user_metadata.full_name || 'Spotify User',
           email: session.user.email || '',
@@ -88,6 +98,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         })
       } else {
         providerTokenRef.current = null
+        localStorage.removeItem('sona_spotify_token')
         setUser(null)
       }
     })
@@ -95,7 +106,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     return () => subscription.unsubscribe()
   }, [])
 
-  // 2. Load cached tracks and profiles on mount (LocalStorage simulation fallback)
+  // 2. Load cached tracks and profiles on mount
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const savedLastSynced = localStorage.getItem('sona_last_synced')
@@ -146,7 +157,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'spotify',
         options: {
-          scopes: 'user-top-read user-read-recently-played',
+          scopes: 'user-read-email user-top-read user-read-recently-played',
           redirectTo: window.location.origin
         }
       })
@@ -177,8 +188,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     } else {
       localStorage.removeItem('sona_session')
     }
+    localStorage.removeItem('sona_spotify_token')
+    localStorage.removeItem('sona_cached_tracks')
+    localStorage.removeItem('sona_last_synced')
+    providerTokenRef.current = null
     setUser(null)
     setProfile(null)
+    setTracks(MusicDNAService.getMockListeningData())
     setActiveItem('dashboard')
   }
 
@@ -187,19 +203,25 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     if (!user) return
     setSyncStatus('syncing')
 
+    // Double check if token is restored from localStorage
+    if (!providerTokenRef.current) {
+      providerTokenRef.current = localStorage.getItem('sona_spotify_token')
+    }
+
     try {
       // Real Supabase + Spotify OAuth Token Sync Flow
       if (supabase && providerTokenRef.current) {
         const token = providerTokenRef.current
+        console.log('Initiating Spotify OAuth Fetch with token:', token.substring(0, 15) + '...')
         
         setSyncProgress('Connecting to Spotify APIs...')
         
         // 1. Fetch Top Tracks
         setSyncProgress('Syncing Top Tracks...')
-        const tracksRes = await fetch('https://api.spotify.com/v1/me/top/tracks?limit=25&time_range=medium_term', {
+        const tracksRes = await fetch('https://api.spotify.com/v1/me/top/tracks?limit=30&time_range=medium_term', {
           headers: { Authorization: `Bearer ${token}` }
         })
-        if (!tracksRes.ok) throw new Error('Spotify tracks sync failed')
+        if (!tracksRes.ok) throw new Error(`Spotify tracks fetch returned status ${tracksRes.status}`)
         const tracksData = await tracksRes.json()
         
         // 2. Fetch Audio Features
@@ -228,9 +250,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           }
         }
 
-        // 3. Fetch Top Artists
+        // 3. Fetch Top Artists (to extract genre descriptors)
         setSyncProgress('Syncing Top Artists...')
-        const artistsRes = await fetch('https://api.spotify.com/v1/me/top/artists?limit=15&time_range=medium_term', {
+        const artistsRes = await fetch('https://api.spotify.com/v1/me/top/artists?limit=20&time_range=medium_term', {
           headers: { Authorization: `Bearer ${token}` }
         })
         let artistGenresMap: { [name: string]: string[] } = {}
@@ -252,7 +274,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           artistId: item.artists[0]?.id || '',
           artistName: item.artists[0]?.name || '',
           genres: artistGenresMap[item.artists[0]?.name] || ['pop'],
-          playCount: Math.floor(Math.random() * 15) + 5, // Simulated count weighting
+          playCount: Math.floor(Math.random() * 10) + 5, // Simulated count weight
           audioFeatures: audioFeaturesMap[item.id] || {
             energy: 0.5,
             acousticness: 0.2,
@@ -271,8 +293,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         const newDNA = MusicDNAService.calculateDNA(mappedTracks)
         const updatedProfile = await MusicDNAService.saveProfile(userId, newDNA)
         setProfile(updatedProfile)
+        
+        console.log('Real Spotify Sync successful! Stored tracks count:', mappedTracks.length)
       } else {
-        // Fallback to high-fidelity simulator sync if offline / keys missing
+        // Fallback to high-fidelity simulator sync if offline / keys missing / token absent
+        console.log('No Spotify OAuth Token found. Running Simulator fallback sync.')
         const steps = [
           { msg: 'Connecting to Spotify OAuth...', delay: 800 },
           { msg: 'Importing Top Artists from listening history...', delay: 900 },
@@ -308,7 +333,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     } catch (err: any) {
       console.error('Data Sync Error:', err)
       setSyncStatus('error')
-      setSyncProgress('Sync Failed. Check API configuration.')
+      setSyncProgress(`Sync Failed: ${err.message || 'API error'}`)
     }
 
     setTimeout(() => {
