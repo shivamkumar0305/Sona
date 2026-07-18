@@ -1,0 +1,34 @@
+# Dependencies
+node_modules/
+frontend/node_modules/
+.pnpm-store/
+
+# Next.js build output
+.next/
+frontend/.next/
+
+# Environment files
+.env
+.env*.local
+frontend/.env*.local
+frontend/.env
+*.env.example
+.env.example
+
+
+# OS files
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+pnpm-debug.log*
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+.pnpm-store/
+.pnpm-store/
+.pnpm-store/
+.pnpm-store/
