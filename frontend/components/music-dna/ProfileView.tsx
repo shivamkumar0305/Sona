@@ -1,6 +1,6 @@
 'use client'
 
-import { useMusicDNA } from '@/hooks/useMusicDNA'
+import { useApp } from '@/context/AppContext'
 import { MusicDNAService } from '@/services/music-dna/MusicDNAService'
 import { TopGenreData, TopArtistData, TopAlbumData } from '@/types/musicDNA'
 import {
@@ -16,10 +16,10 @@ import { RefreshCw, Music, Disc, User, Activity, AlertCircle } from 'lucide-reac
 import { Button } from '@/components/ui/button'
 
 export function ProfileView() {
-  const { profile, isLoading, isRefreshing, error, refreshDNA } = useMusicDNA('demo-user-id')
+  const { profile, tracks, refreshDNA, isRefreshingDNA: isRefreshing } = useApp()
+  const isLoading = !profile
+  const error = null
 
-  // Get raw tracks to calculate top artists, genres, albums dynamically
-  const tracks = MusicDNAService.getMockListeningData()
 
   // 1. Calculate Top Genres
   const genrePlays: { [name: string]: number } = {}
