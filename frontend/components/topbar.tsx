@@ -3,6 +3,7 @@
 import { Search, RefreshCw } from 'lucide-react'
 import { useApp } from '@/context/AppContext'
 import { motion } from 'framer-motion'
+import { ImageWithFallback } from '@/components/ui/image-with-fallback'
 
 export default function TopBar() {
   const { user, syncStatus, syncProgress } = useApp()
@@ -57,10 +58,18 @@ export default function TopBar() {
             </span>
           </div>
           {user.profilePic ? (
-            <img
+            <ImageWithFallback
               src={user.profilePic}
               alt={user.name}
               className="w-8 h-8 rounded-full border border-border object-cover flex-shrink-0"
+              fallback={(
+                <div
+                  className="w-8 h-8 rounded-full bg-foreground text-background flex items-center justify-center text-[10px] font-bold flex-shrink-0"
+                  style={{ fontFamily: 'var(--font-space-mono)' }}
+                >
+                  {getInitials(user.name)}
+                </div>
+              )}
             />
           ) : (
             <div

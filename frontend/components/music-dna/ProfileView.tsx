@@ -6,7 +6,8 @@ import { DNAHorizontalBar, DNACircularProgress, DNAMetricPill, DNARadialCard } f
 import { MusicHabits } from './MusicHabits'
 import { TasteSummaryView } from './TasteSummaryView'
 import { motion } from 'framer-motion'
-import { RefreshCw, Music, Disc, User, Activity } from 'lucide-react'
+import { RefreshCw, Disc, User } from 'lucide-react'
+import { ImageWithFallback } from '@/components/ui/image-with-fallback'
 
 export function ProfileView() {
   const { profile, tracks, refreshDNA, isRefreshingDNA: isRefreshing } = useApp()
@@ -22,27 +23,46 @@ export function ProfileView() {
 
   /* ── Genre map ── */
   const genrePlays: Record<string, number> = {}
-  let totalPlays = 0
+  let totalGenreWeight = 0
   tracks.forEach(t => {
-    t.genres.forEach(g => {
+    const trackGenres = t.genres.filter(g => g && g.toLowerCase() !== 'pop').slice(0, 3)
+    trackGenres.forEach(g => {
       genrePlays[g] = (genrePlays[g] || 0) + t.playCount
-      totalPlays += t.playCount
+      totalGenreWeight += t.playCount
     })
   })
   const topGenres: TopGenreData[] = Object.keys(genrePlays)
-    .map(name => ({ name, playCount: genrePlays[name], percentage: Math.round((genrePlays[name] / Math.max(1, totalPlays)) * 100) }))
+    .map(name => ({ name, playCount: genrePlays[name], percentage: Math.round((genrePlays[name] / Math.max(1, totalGenreWeight)) * 100) }))
     .sort((a, b) => b.playCount - a.playCount)
     .slice(0, 6)
 
   /* ── Artist map ── */
-  const artistMap: Record<string, { name: string; playCount: number; genre: string; imageUrl: string }> = {}
+  const artistMap: Record<string, { name: string; playCount: number; trackIds: Set<string>; imageUrl: string }> = {}
   tracks.forEach(t => {
     if (!t.artistId) return
-    if (!artistMap[t.artistId]) artistMap[t.artistId] = { name: t.artistName, playCount: 0, genre: t.genres[0] || '', imageUrl: t.artistImageUrl || '' }
+    if (!artistMap[t.artistId]) {
+      artistMap[t.artistId] = {
+        name: t.artistName,
+        playCount: 0,
+        trackIds: new Set(),
+        imageUrl: t.artistImageUrl || t.imageUrl || ''
+      }
+    }
+    if (!artistMap[t.artistId].imageUrl && (t.artistImageUrl || t.imageUrl)) {
+      artistMap[t.artistId].imageUrl = t.artistImageUrl || t.imageUrl || ''
+    }
+    artistMap[t.artistId].trackIds.add(t.id)
     artistMap[t.artistId].playCount += t.playCount
   })
   const topArtists: TopArtistData[] = Object.entries(artistMap)
-    .map(([id, v]) => ({ id, name: v.name, subtitle: v.genre, count: `${v.playCount} plays`, playCount: v.playCount, imageUrl: v.imageUrl }))
+    .map(([id, v]) => ({
+      id,
+      name: v.name,
+      subtitle: `${v.trackIds.size} ${v.trackIds.size === 1 ? 'track' : 'tracks'}`,
+      count: `${v.playCount} plays`,
+      playCount: v.playCount,
+      imageUrl: v.imageUrl
+    }))
     .sort((a, b) => b.playCount - a.playCount)
     .slice(0, 4)
 
@@ -116,17 +136,23 @@ export function ProfileView() {
         {/* Top Genres */}
         <div className="premium-card space-y-5">
           <p className="section-title mb-0">Top Genres</p>
-          <div className="space-y-5">
-            {topGenres.map((g, i) => (
-              <DNAHorizontalBar
-                key={g.name}
-                label={g.name}
-                value={g.percentage}
-                delay={i * 0.04}
-                colorClass={i === 0 ? 'from-foreground to-foreground/70' : 'from-muted-foreground/40 to-muted-foreground/10'}
-              />
-            ))}
-          </div>
+          {topGenres.length > 0 ? (
+            <div className="space-y-5">
+              {topGenres.map((g, i) => (
+                <DNAHorizontalBar
+                  key={g.name}
+                  label={g.name}
+                  value={g.percentage}
+                  delay={i * 0.04}
+                  colorClass={i === 0 ? 'from-foreground to-foreground/70' : 'from-muted-foreground/40 to-muted-foreground/10'}
+                />
+              ))}
+            </div>
+          ) : (
+            <p className="text-xs text-muted-foreground leading-relaxed" style={{ fontFamily: 'var(--font-space-mono)' }}>
+              Spotify did not return genre metadata for these tracks yet. Sync again after listening data changes.
+            </p>
+          )}
         </div>
 
         {/* Taste summary */}
@@ -142,7 +168,16 @@ export function ProfileView() {
             {topArtists.map(artist => (
               <div key={artist.id} className="list-row cursor-pointer">
                 {artist.imageUrl ? (
-                  <img src={artist.imageUrl} alt={artist.name} className="w-10 h-10 rounded-full object-cover border border-border/60 flex-shrink-0" />
+                  <ImageWithFallback
+                    src={artist.imageUrl}
+                    alt={artist.name}
+                    className="w-10 h-10 rounded-full object-cover border border-border/60 flex-shrink-0"
+                    fallback={(
+                      <div className="w-10 h-10 rounded-full bg-secondary border border-border flex items-center justify-center flex-shrink-0">
+                        <User className="w-4 h-4 text-muted-foreground/30" />
+                      </div>
+                    )}
+                  />
                 ) : (
                   <div className="w-10 h-10 rounded-full bg-secondary border border-border flex items-center justify-center flex-shrink-0">
                     <User className="w-4 h-4 text-muted-foreground/30" />
@@ -165,7 +200,16 @@ export function ProfileView() {
             {topAlbums.map(album => (
               <div key={album.id} className="list-row cursor-pointer">
                 {album.imageUrl ? (
-                  <img src={album.imageUrl} alt={album.name} className="w-10 h-10 rounded-xl object-cover border border-border/60 flex-shrink-0" />
+                  <ImageWithFallback
+                    src={album.imageUrl}
+                    alt={album.name}
+                    className="w-10 h-10 rounded-xl object-cover border border-border/60 flex-shrink-0"
+                    fallback={(
+                      <div className="w-10 h-10 rounded-xl bg-secondary border border-border flex items-center justify-center flex-shrink-0">
+                        <Disc className="w-4 h-4 text-muted-foreground/30" />
+                      </div>
+                    )}
+                  />
                 ) : (
                   <div className="w-10 h-10 rounded-xl bg-secondary border border-border flex items-center justify-center flex-shrink-0">
                     <Disc className="w-4 h-4 text-muted-foreground/30" />

@@ -13,6 +13,15 @@ export interface SpotifyRecentTrack {
   playedAt: string
 }
 
+interface SpotifyArtistMeta {
+  genres: string[]
+  imageUrl: string
+}
+
+interface SpotifyAlbumMeta {
+  genres: string[]
+}
+
 interface UserSession {
   name: string
   email: string
@@ -63,6 +72,50 @@ function getRelativeTime(timestamp: string): string {
   
   const diffDays = Math.floor(diffHours / 24)
   return `${diffDays}d ago`
+}
+
+function getSpotifyImageUrl(images?: Array<{ url?: string; width?: number | null }> | null): string {
+  if (!images?.length) return ''
+
+  const image = [...images]
+    .filter((item) => typeof item?.url === 'string' && item.url.trim().length > 0)
+    .sort((a, b) => (b.width || 0) - (a.width || 0))[0]
+
+  return image?.url?.trim().replace(/^http:\/\//, 'https://') || ''
+}
+
+function normalizeGenres(genres?: unknown): string[] {
+  if (!Array.isArray(genres)) return []
+
+  const seen = new Set<string>()
+  return genres
+    .filter((genre): genre is string => typeof genre === 'string')
+    .map((genre) => genre.trim().toLowerCase())
+    .filter((genre) => genre.length > 0)
+    .filter((genre) => {
+      if (seen.has(genre)) return false
+      seen.add(genre)
+      return true
+    })
+}
+
+function hasUsableGenres(genres?: string[]): boolean {
+  return !!genres?.some((genre) => genre.trim().length > 0 && genre.toLowerCase() !== 'pop')
+}
+
+function cachedTracksHaveMissingImages(tracks: SpotifyTrackMeta[] | null): boolean {
+  if (!tracks?.length) return false
+  return tracks.some((track) => !track.imageUrl?.trim() || (!track.artistImageUrl?.trim() && !track.imageUrl?.trim()))
+}
+
+function cachedTracksHaveFallbackGenres(tracks: SpotifyTrackMeta[] | null): boolean {
+  if (!tracks?.length) return false
+  return !tracks.some((track) => hasUsableGenres(track.genres))
+}
+
+function cachedRecentHaveMissingImages(tracks: SpotifyRecentTrack[] | null): boolean {
+  if (!tracks?.length) return false
+  return tracks.some((track) => !track.imageUrl?.trim())
 }
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
@@ -134,31 +187,36 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, [])
 
   // 2. Load cached tracks, recently played, and profiles on mount
+  // Wipes stale cache if tracks are missing image URLs (old format pre-image-fix)
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const savedLastSynced = localStorage.getItem('sona_last_synced')
-      if (savedLastSynced) setLastSynced(savedLastSynced)
-      
-      const cachedTracks = localStorage.getItem('sona_cached_tracks')
-      if (cachedTracks) {
-        setTracks(JSON.parse(cachedTracks))
-      } else {
-        const defaultTracks = MusicDNAService.getMockListeningData()
-        setTracks(defaultTracks)
-        localStorage.setItem('sona_cached_tracks', JSON.stringify(defaultTracks))
+
+      const cachedTracksRaw = localStorage.getItem('sona_cached_tracks')
+      let cachedTracks = cachedTracksRaw ? JSON.parse(cachedTracksRaw) : null
+
+      // If cached tracks are missing artist metadata, they are stale.
+      const isStale = cachedTracksHaveMissingImages(cachedTracks) || cachedTracksHaveFallbackGenres(cachedTracks)
+      if (isStale) {
+        localStorage.removeItem('sona_cached_tracks')
+        localStorage.removeItem('sona_cached_recent')
+        localStorage.removeItem('sona_last_synced')
+        cachedTracks = null
+      } else if (savedLastSynced) {
+        setLastSynced(savedLastSynced)
       }
 
-      const cachedRecent = localStorage.getItem('sona_cached_recent')
-      if (cachedRecent) {
-        setRecentlyPlayed(JSON.parse(cachedRecent))
-      } else {
-        // Fallback simulator recent tracks
-        const mockRecent: SpotifyRecentTrack[] = [
-          { id: 'recent1', name: 'Echo Chamber', artistName: 'Various Artists', imageUrl: '', playedAt: '12m ago' },
-          { id: 'recent2', name: 'Midnight Flow', artistName: 'Luna State', imageUrl: '', playedAt: '2h ago' },
-          { id: 'recent3', name: 'Velocity Zero', artistName: 'Crystal Mind', imageUrl: '', playedAt: 'Yesterday' }
-        ]
-        setRecentlyPlayed(mockRecent)
+      if (cachedTracks) {
+        setTracks(cachedTracks)
+      }
+      // Don't load mock tracks — leave empty so auto-sync fills them
+
+      const cachedRecentRaw = localStorage.getItem('sona_cached_recent')
+      const cachedRecent = cachedRecentRaw ? JSON.parse(cachedRecentRaw) : null
+      if (cachedRecentHaveMissingImages(cachedRecent)) {
+        localStorage.removeItem('sona_cached_recent')
+      } else if (cachedRecent) {
+        setRecentlyPlayed(cachedRecent)
       }
 
       if (!supabase) {
@@ -254,6 +312,17 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       if (supabase && providerTokenRef.current) {
         const token = providerTokenRef.current
         console.log('Initiating Spotify OAuth Sync...')
+
+        const expireSpotifyToken = () => {
+          providerTokenRef.current = null
+          localStorage.removeItem('sona_spotify_token')
+          setSyncStatus('error')
+          setSyncProgress('Spotify session expired. Sign out and connect Spotify again.')
+          setTimeout(() => {
+            setSyncStatus('idle')
+            setSyncProgress('')
+          }, 5000)
+        }
         
         setSyncProgress('Connecting to Spotify APIs...')
         
@@ -262,18 +331,51 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         const tracksRes = await fetch('https://api.spotify.com/v1/me/top/tracks?limit=25&time_range=medium_term', {
           headers: { Authorization: `Bearer ${token}` }
         })
+        if (tracksRes.status === 401) {
+          expireSpotifyToken()
+          return
+        }
         if (!tracksRes.ok) throw new Error(`Tracks fetch returned status ${tracksRes.status}`)
         const tracksData = await tracksRes.json()
 
-        // 2. Fetch Artists details (GENRES and IMAGES) for all unique artists in the top tracks!
+        // 2. Fetch Top Artists first; it is the most reliable source for artist images and genres.
         setSyncProgress('Syncing artist genres and details...')
-        const artistIds = Array.from(
-          new Set(tracksData.items.map((t: any) => t.artists[0]?.id).filter(Boolean))
+        const artistIdsFromTracks = Array.from(
+          new Set(
+            tracksData.items
+              .flatMap((track: any) => track.artists?.map((artist: any) => artist.id) || [])
+              .filter(Boolean)
+          )
+        )
+        const albumIdsFromTracks = Array.from(
+          new Set(tracksData.items.map((track: any) => track.album?.id).filter(Boolean))
         )
         
-        let artistGenresMap: { [id: string]: string[] } = {}
-        let artistImagesMap: { [id: string]: string } = {}
-        
+        const artistMetaMap: Record<string, SpotifyArtistMeta> = {}
+        const topArtistsRes = await fetch('https://api.spotify.com/v1/me/top/artists?limit=50&time_range=medium_term', {
+          headers: { Authorization: `Bearer ${token}` }
+        })
+
+        if (topArtistsRes.ok) {
+          const topArtistsData = await topArtistsRes.json()
+          topArtistsData.items.forEach((artist: any) => {
+            if (!artist?.id) return
+            artistMetaMap[artist.id] = {
+              genres: normalizeGenres(artist.genres),
+              imageUrl: getSpotifyImageUrl(artist.images)
+            }
+          })
+        } else {
+          console.warn('Top artists fetch returned status', topArtistsRes.status)
+        }
+
+        const artistIds = Array.from(
+          new Set([
+            ...artistIdsFromTracks,
+            ...Object.keys(artistMetaMap)
+          ])
+        )
+
         if (artistIds.length > 0) {
           const artistsRes = await fetch(`https://api.spotify.com/v1/artists?ids=${artistIds.slice(0, 50).join(',')}`, {
             headers: { Authorization: `Bearer ${token}` }
@@ -281,11 +383,33 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           if (artistsRes.ok) {
             const artistsData = await artistsRes.json()
             artistsData.artists.forEach((art: any) => {
-              if (art) {
-                artistGenresMap[art.id] = art.genres || []
-                artistImagesMap[art.id] = art.images?.[0]?.url || ''
+              if (!art?.id) return
+              const existing = artistMetaMap[art.id]
+              artistMetaMap[art.id] = {
+                genres: hasUsableGenres(existing?.genres) ? existing.genres : normalizeGenres(art.genres),
+                imageUrl: existing?.imageUrl || getSpotifyImageUrl(art.images)
               }
             })
+          } else {
+            console.warn('Artists details fetch returned status', artistsRes.status)
+          }
+        }
+
+        const albumMetaMap: Record<string, SpotifyAlbumMeta> = {}
+        if (albumIdsFromTracks.length > 0) {
+          const albumsRes = await fetch(`https://api.spotify.com/v1/albums?ids=${albumIdsFromTracks.slice(0, 20).join(',')}`, {
+            headers: { Authorization: `Bearer ${token}` }
+          })
+          if (albumsRes.ok) {
+            const albumsData = await albumsRes.json()
+            albumsData.albums.forEach((album: any) => {
+              if (!album?.id) return
+              albumMetaMap[album.id] = {
+                genres: normalizeGenres(album.genres)
+              }
+            })
+          } else {
+            console.warn('Albums details fetch returned status', albumsRes.status)
           }
         }
 
@@ -327,7 +451,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             id: item.track.id + '-' + item.played_at,
             name: item.track.name,
             artistName: item.track.artists?.[0]?.name || '',
-            imageUrl: item.track.album?.images?.[0]?.url || '',
+            imageUrl: getSpotifyImageUrl(item.track.album?.images),
             playedAt: getRelativeTime(item.played_at)
           }))
         }
@@ -338,6 +462,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         setSyncProgress('Mapping taste index parameters...')
         const mappedTracks: SpotifyTrackMeta[] = tracksData.items.map((item: any) => {
           const primaryArtistId = item.artists[0]?.id || ''
+          const artistMeta = artistMetaMap[primaryArtistId]
+          const albumImageUrl = getSpotifyImageUrl(item.album?.images)
+          const trackGenres = normalizeGenres([
+            ...(item.artists || []).flatMap((artist: any) => artistMetaMap[artist.id]?.genres || []),
+            ...(albumMetaMap[item.album?.id]?.genres || []),
+            ...(artistMeta?.genres || [])
+          ]).slice(0, 6)
+
           return {
             id: item.id,
             name: item.name,
@@ -346,10 +478,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             albumName: item.album.name,
             artistId: primaryArtistId,
             artistName: item.artists[0]?.name || '',
-            genres: artistGenresMap[primaryArtistId] || ['pop'],
+            genres: trackGenres,
             playCount: Math.floor(Math.random() * 10) + 5,
-            imageUrl: item.album.images?.[0]?.url || '',
-            artistImageUrl: artistImagesMap[primaryArtistId] || '',
+            imageUrl: albumImageUrl,
+            artistImageUrl: artistMeta?.imageUrl || albumImageUrl,
             audioFeatures: audioFeaturesMap[item.id] || {
               energy: 0.5,
               acousticness: 0.2,
@@ -415,7 +547,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       setSyncStatus('completed')
       setSyncProgress('Sync Complete!')
     } catch (err: any) {
-      console.error('Data Sync Error:', err)
+      console.warn('Data Sync Error:', err)
       setSyncStatus('error')
       setSyncProgress(`Sync Failed: ${err.message || 'API error'}`)
     }
@@ -426,15 +558,18 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }, 3000)
   }, [user])
 
-  // 4. Auto-trigger sync on first login (if lastSynced is null)
+  // 4. Auto-trigger sync whenever user logs in with a valid Spotify token
+  // Uses a ref to track if we already fired sync this session
+  const hasSyncedThisSession = useRef(false)
   useEffect(() => {
-    if (user && !lastSynced && syncStatus === 'idle') {
+    if (user && syncStatus === 'idle' && !hasSyncedThisSession.current) {
       const token = providerTokenRef.current || localStorage.getItem('sona_spotify_token')
       if (token) {
+        hasSyncedThisSession.current = true
         syncData()
       }
     }
-  }, [user, lastSynced, syncStatus, syncData])
+  }, [user, syncStatus, syncData])
 
   // Manual Refresh Music DNA
   const refreshDNA = async () => {

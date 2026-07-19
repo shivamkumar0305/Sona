@@ -2,7 +2,7 @@
 
 import { useApp } from '@/context/AppContext'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Music, RefreshCw, Headphones, BarChart3, Sparkles } from 'lucide-react'
+import { RefreshCw, Headphones, BarChart3, Sparkles } from 'lucide-react'
 
 const FEATURES = [
   { icon: BarChart3, label: 'Music DNA', desc: 'Deep acoustic analysis of your taste profile' },
@@ -17,13 +17,10 @@ export function LoginPage() {
     <div className="min-h-screen bg-background flex flex-col">
       {/* Top header */}
       <header className="flex items-center justify-between px-8 py-5 border-b border-border/60">
-        <div className="flex items-center gap-2.5">
-          <div className="w-7 h-7 bg-foreground rounded-lg flex items-center justify-center">
-            <Music className="w-3.5 h-3.5 text-background" />
-          </div>
+        <div className="flex items-center">
           <span
-            className="text-sm font-extrabold tracking-tight text-foreground"
-            style={{ fontFamily: 'var(--font-syne), sans-serif' }}
+            className="text-lg font-extrabold tracking-tight text-foreground"
+            style={{ fontFamily: 'var(--font-syne), sans-serif', letterSpacing: '-0.02em' }}
           >
             Sona
           </span>
@@ -86,10 +83,7 @@ export function LoginPage() {
                 <span>Connecting to Spotify…</span>
               </>
             ) : (
-              <>
-                <Music className="w-4 h-4" />
-                <span>Connect with Spotify</span>
-              </>
+              <span>Connect with Spotify</span>
             )}
           </button>
         </motion.div>

@@ -1,6 +1,6 @@
 'use client'
 
-import { Music, TrendingUp, BarChart3 } from 'lucide-react'
+import { ImageWithFallback } from '@/components/ui/image-with-fallback'
 
 interface ContentGridProps {
   title: string
@@ -29,15 +29,16 @@ export default function ContentGrid({ title, items, icon = 'music', square = fal
             {/* Art */}
             <div className={`relative overflow-hidden border border-border bg-secondary ${square ? 'aspect-square' : 'aspect-[3/4]'} rounded-2xl`}>
               {item.imageUrl ? (
-                <img
+                <ImageWithFallback
                   src={item.imageUrl}
                   alt={item.name}
                   className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                  fallback={(
+                    <div className="w-full h-full bg-secondary" />
+                  )}
                 />
               ) : (
-                <div className="w-full h-full flex items-center justify-center">
-                  <Music className="w-6 h-6 text-muted-foreground/30" />
-                </div>
+                <div className="w-full h-full bg-secondary" />
               )}
             </div>
 

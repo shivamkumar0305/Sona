@@ -12,7 +12,7 @@ const syne = Syne({
 
 const spaceMono = Space_Mono({
   subsets: ['latin'],
-  variable: '--font-mono',
+  variable: '--font-space-mono',
   weight: ['400', '700'],
 })
 
@@ -57,6 +57,5 @@ export default function RootLayout({
     </html>
   )
 }
-
 
 

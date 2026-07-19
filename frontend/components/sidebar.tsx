@@ -1,6 +1,6 @@
 'use client'
 
-import { Music, Home, User, Settings, BarChart3 } from 'lucide-react'
+import { Home, Settings, BarChart3 } from 'lucide-react'
 
 interface SidebarProps {
   activeItem: string
@@ -20,12 +20,9 @@ export default function Sidebar({ activeItem, setActiveItem }: SidebarProps) {
   return (
     <aside className="fixed left-0 top-0 h-screen w-60 bg-sidebar border-r border-sidebar-border flex flex-col">
       {/* Logo */}
-      <div className="px-5 py-5 border-b border-sidebar-border flex items-center gap-2.5">
-        <div className="w-7 h-7 bg-foreground rounded-lg flex items-center justify-center flex-shrink-0">
-          <Music className="w-3.5 h-3.5 text-background" />
-        </div>
+      <div className="px-5 py-5 border-b border-sidebar-border flex items-center">
         <span
-          className="text-sm font-extrabold tracking-tight text-foreground"
+          className="text-lg font-extrabold tracking-tight text-foreground"
           style={{ fontFamily: 'var(--font-syne), sans-serif', letterSpacing: '-0.02em' }}
         >
           Sona

@@ -7,7 +7,8 @@ import ContentGrid from '@/components/content-grid'
 import { ProfileView } from '@/components/music-dna/ProfileView'
 import { LoginPage } from '@/components/auth/LoginPage'
 import { motion } from 'framer-motion'
-import { RefreshCw, User, LogOut, CheckCircle, Database, Music } from 'lucide-react'
+import { RefreshCw, User, LogOut, CheckCircle, Database } from 'lucide-react'
+import { ImageWithFallback } from '@/components/ui/image-with-fallback'
 
 export default function Home() {
   const {
@@ -24,16 +25,31 @@ export default function Home() {
   const uniqueArtistsCount = new Set(tracks.map(t => t.artistId)).size
 
   /* top artists */
-  const artistMap: Record<string, { name: string; playCount: number; genre: string; imageUrl: string }> = {}
+  const artistMap: Record<string, { name: string; playCount: number; trackIds: Set<string>; imageUrl: string }> = {}
   tracks.forEach(track => {
     if (!track.artistId) return
     if (!artistMap[track.artistId]) {
-      artistMap[track.artistId] = { name: track.artistName, playCount: 0, genre: track.genres[0] || '', imageUrl: track.artistImageUrl || '' }
+      artistMap[track.artistId] = {
+        name: track.artistName,
+        playCount: 0,
+        trackIds: new Set(),
+        imageUrl: track.artistImageUrl || track.imageUrl || ''
+      }
     }
+    if (!artistMap[track.artistId].imageUrl && (track.artistImageUrl || track.imageUrl)) {
+      artistMap[track.artistId].imageUrl = track.artistImageUrl || track.imageUrl || ''
+    }
+    artistMap[track.artistId].trackIds.add(track.id)
     artistMap[track.artistId].playCount += track.playCount
   })
   const topArtists = Object.entries(artistMap)
-    .map(([id, v]) => ({ id, name: v.name, subtitle: v.genre, count: `${v.playCount} plays`, imageUrl: v.imageUrl }))
+    .map(([id, v]) => ({
+      id,
+      name: v.name,
+      subtitle: `${v.trackIds.size} ${v.trackIds.size === 1 ? 'track' : 'tracks'}`,
+      count: `${v.playCount} plays`,
+      imageUrl: v.imageUrl
+    }))
     .sort((a, b) => parseInt(b.count) - parseInt(a.count))
     .slice(0, 6)
 
@@ -184,7 +200,7 @@ export default function Home() {
                       backgroundSize: '20px 20px',
                     }}
                   />
-                  <div className="relative z-10 flex flex-col sm:flex-row sm:items-end justify-between gap-6">
+                  <div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-6">
                     <div className="space-y-3">
                       <p className="mono-label">Spotify account</p>
                       <h2
@@ -194,21 +210,23 @@ export default function Home() {
                         Hi, {user.name.split(' ')[0]}
                       </h2>
                       <p className="text-xs text-muted-foreground leading-relaxed max-w-sm" style={{ fontFamily: 'var(--font-space-mono)' }}>
-                        {tracks.length > 0
+                        {syncStatus === 'error' && syncProgress
+                          ? syncProgress
+                          : tracks.length > 0
                           ? `${totalPlayCount} plays tracked across ${uniqueArtistsCount} artists.`
                           : 'Sync your Spotify data to see your stats.'}
                       </p>
                     </div>
 
                     {/* Stat chips */}
-                    <div className="flex gap-3 flex-wrap sm:flex-nowrap">
+                    <div className="flex items-center justify-center gap-3 flex-wrap sm:flex-nowrap">
                       {[
                         { label: 'Artists', value: uniqueArtistsCount || '—' },
                         { label: 'Tracks', value: tracks.length || '—' },
                       ].map(stat => (
                         <div
                           key={stat.label}
-                          className="flex flex-col items-center px-5 py-4 bg-secondary border border-border rounded-2xl min-w-[80px]"
+                          className="flex h-[72px] min-w-[80px] flex-col items-center justify-center bg-secondary border border-border rounded-2xl px-5"
                         >
                           <span className="text-xl font-extrabold text-foreground" style={{ fontFamily: 'var(--font-syne)' }}>
                             {stat.value}
@@ -216,15 +234,17 @@ export default function Home() {
                           <span className="mono-label mt-1">{stat.label}</span>
                         </div>
                       ))}
-                      <div
-                        className="flex flex-col items-center px-5 py-4 bg-secondary border border-border rounded-2xl min-w-[90px] cursor-pointer hover:bg-foreground hover:text-background hover:border-foreground transition-all duration-200 group"
+                      <button
+                        type="button"
+                        disabled={syncStatus === 'syncing'}
+                        className="group flex h-[72px] min-w-[90px] flex-col items-center justify-center gap-1 rounded-2xl border border-foreground bg-foreground px-5 text-background transition-all duration-200 hover:opacity-85 disabled:cursor-not-allowed disabled:opacity-70"
                         onClick={syncData}
                       >
-                        <RefreshCw className={`w-4 h-4 mb-1 text-muted-foreground group-hover:text-background ${syncStatus === 'syncing' ? 'animate-spin-slow' : ''}`} />
-                        <span className="mono-label group-hover:text-background/70 transition-colors">
+                        <RefreshCw className={`w-4 h-4 text-background ${syncStatus === 'syncing' ? 'animate-spin-slow' : ''}`} />
+                        <span className="text-[10px] font-bold uppercase tracking-widest text-background/70" style={{ fontFamily: 'var(--font-space-mono)' }}>
                           {syncStatus === 'syncing' ? 'Syncing' : 'Sync'}
                         </span>
-                      </div>
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -250,12 +270,16 @@ export default function Home() {
                       <div key={track.id} className="list-row group cursor-pointer">
                         <div className="flex items-center gap-4 min-w-0">
                           {track.imageUrl ? (
-                            <img src={track.imageUrl} alt={track.name}
-                              className="w-10 h-10 rounded-xl object-cover border border-border/60 flex-shrink-0" />
+                            <ImageWithFallback
+                              src={track.imageUrl}
+                              alt={track.name}
+                              className="w-10 h-10 rounded-xl object-cover border border-border/60 flex-shrink-0"
+                              fallback={(
+                                <div className="w-10 h-10 bg-secondary rounded-xl border border-border flex-shrink-0" />
+                              )}
+                            />
                           ) : (
-                            <div className="w-10 h-10 bg-secondary rounded-xl border border-border flex items-center justify-center flex-shrink-0">
-                              <Music className="w-4 h-4 text-muted-foreground/40" />
-                            </div>
+                            <div className="w-10 h-10 bg-secondary rounded-xl border border-border flex-shrink-0" />
                           )}
                           <div className="min-w-0">
                             <p className="text-xs font-bold text-foreground truncate" style={{ fontFamily: 'var(--font-syne)', textTransform: 'none', letterSpacing: 'normal' }}>
