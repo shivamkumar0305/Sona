@@ -30,6 +30,8 @@ export interface SpotifyTrackMeta {
   artistName: string;
   genres: string[];
   playCount: number;
+  imageUrl?: string;
+  artistImageUrl?: string;
   // Optional audio features if Spotify returns them
   audioFeatures?: {
     energy?: number; // 0 to 1
@@ -64,6 +66,7 @@ export interface TopArtistData {
   subtitle: string; // e.g. genre or status
   count: string; // e.g. "342 plays"
   playCount: number;
+  imageUrl?: string;
 }
 
 export interface TopAlbumData {
@@ -72,4 +75,6 @@ export interface TopAlbumData {
   subtitle: string; // e.g. artist name
   count: string; // e.g. "45 plays"
   playCount: number;
+  imageUrl?: string;
 }
+

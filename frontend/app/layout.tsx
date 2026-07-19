@@ -47,7 +47,7 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en" className={`dark ${syne.variable} ${spaceMono.variable}`}>
+    <html lang="en" className={`${syne.variable} ${spaceMono.variable}`}>
       <body className="bg-background text-foreground antialiased font-mono">
         <AppProvider>
           {children}
@@ -57,5 +57,6 @@ export default function RootLayout({
     </html>
   )
 }
+
 
 

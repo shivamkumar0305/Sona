@@ -75,24 +75,22 @@ export function TasteSummaryView({ profile }: TasteSummaryViewProps) {
 
   return (
     <motion.div
-      className="premium-card bg-card/40 border border-border/50 relative overflow-hidden p-8"
+      className="premium-card bg-card border border-border/80 rounded-xl relative overflow-hidden p-6"
       initial={{ opacity: 0, y: 15 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}
     >
-      <div className="absolute -bottom-8 -right-8 w-48 h-48 bg-accent/5 rounded-full blur-3xl pointer-events-none" />
-      
       <div className="flex items-center gap-3 mb-6">
-        <div className="p-2 rounded-lg bg-accent/10 text-accent">
-          <Sparkles className="w-5 h-5" />
+        <div className="p-2 rounded-lg bg-secondary text-foreground border border-border">
+          <Sparkles className="w-4 h-4" />
         </div>
-        <h3 className="text-xl font-bold text-foreground">Taste Summary</h3>
+        <h3 className="text-base font-bold text-foreground uppercase tracking-tight">Taste Summary</h3>
       </div>
 
-      <div className="relative z-10 pl-6 border-l-2 border-accent/40 space-y-4">
-        <Quote className="absolute -left-[14px] -top-3 w-6 h-6 text-accent/40 bg-background" />
+      <div className="relative z-10 pl-6 border-l border-foreground/30 space-y-4 font-mono text-xs">
+        <Quote className="absolute -left-[9px] -top-2.5 w-4 h-4 text-foreground/30 bg-background" />
         {paragraphs.map((p, idx) => (
-          <p key={idx} className="text-base text-muted-foreground leading-relaxed font-normal">
+          <p key={idx} className="text-muted-foreground leading-relaxed">
             {p}
           </p>
         ))}

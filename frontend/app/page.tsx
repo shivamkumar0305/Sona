@@ -3,14 +3,11 @@
 import { useApp } from '@/context/AppContext'
 import Sidebar from '@/components/sidebar'
 import TopBar from '@/components/topbar'
-import HeroCard from '@/components/hero-card'
 import ContentGrid from '@/components/content-grid'
-import ActivityChart from '@/components/activity-chart'
-import GenreCards from '@/components/genre-cards'
 import { ProfileView } from '@/components/music-dna/ProfileView'
 import { LoginPage } from '@/components/auth/LoginPage'
 import { motion } from 'framer-motion'
-import { RefreshCw, Play, Disc, User, LogOut, CheckCircle, Database } from 'lucide-react'
+import { RefreshCw, User, LogOut, CheckCircle, Database, Music } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
 export default function Home() {
@@ -20,6 +17,7 @@ export default function Home() {
     activeItem,
     setActiveItem,
     tracks,
+    recentlyPlayed,
     syncStatus,
     syncProgress,
     syncData,
@@ -34,20 +32,21 @@ export default function Home() {
     return <LoginPage />
   }
 
-  // 1. Calculate dynamic statistics
-  const uniqueArtists = new Set(tracks.map(t => t.artistId)).size
-  const uniqueAlbums = new Set(tracks.map(t => t.albumId)).size
+  // Calculate dynamic stats
   const totalPlayCount = tracks.reduce((acc, t) => acc + t.playCount, 0)
+  const uniqueArtistsCount = new Set(tracks.map(t => t.artistId)).size
+  const uniqueAlbumsCount = new Set(tracks.map(t => t.albumId)).size
   
   // Dynamic mapped Top Artists
-  const artistMap: { [id: string]: { name: string; playCount: number; genre: string } } = {}
+  const artistMap: { [id: string]: { name: string; playCount: number; genre: string; imageUrl: string } } = {}
   tracks.forEach(track => {
     if (track.artistId) {
       if (!artistMap[track.artistId]) {
         artistMap[track.artistId] = {
           name: track.artistName,
           playCount: 0,
-          genre: track.genres[0] || 'Unknown Genre'
+          genre: track.genres[0] || 'Unknown Genre',
+          imageUrl: track.artistImageUrl || ''
         }
       }
       artistMap[track.artistId].playCount += track.playCount
@@ -59,20 +58,22 @@ export default function Home() {
       id,
       name: artistMap[id].name,
       subtitle: artistMap[id].genre,
-      count: `${artistMap[id].playCount} plays`
+      count: `${artistMap[id].playCount} plays`,
+      imageUrl: artistMap[id].imageUrl
     }))
     .sort((a, b) => parseInt(b.count) - parseInt(a.count))
     .slice(0, 3)
 
   // Dynamic mapped Top Albums
-  const albumMap: { [id: string]: { name: string; playCount: number; artist: string } } = {}
+  const albumMap: { [id: string]: { name: string; playCount: number; artist: string; imageUrl: string } } = {}
   tracks.forEach(track => {
     if (track.albumId) {
       if (!albumMap[track.albumId]) {
         albumMap[track.albumId] = {
           name: track.albumName,
           playCount: 0,
-          artist: track.artistName
+          artist: track.artistName,
+          imageUrl: track.imageUrl || ''
         }
       }
       albumMap[track.albumId].playCount += track.playCount
@@ -84,7 +85,8 @@ export default function Home() {
       id,
       name: albumMap[id].name,
       subtitle: albumMap[id].artist,
-      count: `${albumMap[id].playCount} plays`
+      count: `${albumMap[id].playCount} plays`,
+      imageUrl: albumMap[id].imageUrl
     }))
     .sort((a, b) => parseInt(b.count) - parseInt(a.count))
     .slice(0, 3)
@@ -97,21 +99,9 @@ export default function Home() {
       id: t.id,
       name: t.name,
       subtitle: t.artistName,
-      count: `${t.playCount} plays`
+      count: `${t.playCount} plays`,
+      imageUrl: t.imageUrl
     }))
-
-  // Dynamic mapped Recently Played
-  const recentlyPlayedList = [...tracks]
-    .slice(0, 3)
-    .map((t, idx) => {
-      const times = ['12 min ago', '2 hours ago', 'Yesterday']
-      return {
-        id: t.id,
-        name: t.name,
-        subtitle: t.artistName,
-        count: times[idx] || 'Recently'
-      }
-    })
 
   return (
     <div className="flex h-screen bg-background">
@@ -136,73 +126,69 @@ export default function Home() {
             activeItem === 'settings' ? (
               <div className="space-y-12">
                 <div className="pb-6 border-b border-border/30">
-                  <h2 className="text-3xl font-extrabold tracking-tight mb-2 text-foreground">Settings</h2>
-                  <p className="text-muted-foreground">Manage your Spotify account link, sync frequency, and data profile caches.</p>
+                  <h2 className="text-3xl font-extrabold tracking-tight mb-2 text-foreground uppercase">Settings</h2>
+                  <p className="text-sm text-muted-foreground font-mono">Manage Sona credentials and sync caches.</p>
                 </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                  {/* Account Information */}
+                  {/* Account Info */}
                   <section className="premium-card space-y-6">
-                    <h3 className="text-lg font-bold flex items-center gap-2">
-                      <User className="w-5 h-5 text-accent" />
-                      Account Connection
+                    <h3 className="text-lg font-bold uppercase tracking-tight flex items-center gap-2">
+                      <User className="w-4 h-4" />
+                      Account info
                     </h3>
                     
-                    <div className="space-y-4 font-mono text-sm">
+                    <div className="space-y-4 font-mono text-xs">
                       <div className="flex justify-between py-2 border-b border-border/30">
-                        <span className="text-muted-foreground">Linked Account</span>
+                        <span className="text-muted-foreground">Spotify Name</span>
                         <span className="text-foreground font-bold">{user.name}</span>
                       </div>
                       <div className="flex justify-between py-2 border-b border-border/30">
-                        <span className="text-muted-foreground">Email Address</span>
+                        <span className="text-muted-foreground">Spotify Email</span>
                         <span className="text-foreground">{user.email}</span>
                       </div>
-                      <div className="flex justify-between py-2 border-b border-border/30">
-                        <span className="text-muted-foreground">Spotify Username</span>
-                        <span className="text-foreground lowercase">{user.spotifyUser}</span>
-                      </div>
                       <div className="flex justify-between py-2">
-                        <span className="text-muted-foreground">Connection Status</span>
-                        <span className="text-accent font-bold uppercase tracking-wider flex items-center gap-1">
-                          <CheckCircle className="w-4 h-4" /> Connected
+                        <span className="text-muted-foreground">Connection</span>
+                        <span className="text-foreground uppercase tracking-wider flex items-center gap-1">
+                          <CheckCircle className="w-3.5 h-3.5 text-foreground" /> Connected
                         </span>
                       </div>
                     </div>
 
                     <Button
                       onClick={logout}
-                      className="border border-destructive bg-destructive/10 hover:bg-destructive hover:text-destructive-foreground text-destructive font-mono font-bold text-xs uppercase tracking-wider w-full py-3 rounded-none flex items-center justify-center gap-2 cursor-pointer"
+                      className="border border-foreground bg-foreground text-background hover:bg-foreground/80 font-mono font-bold text-xs uppercase tracking-wider w-full py-3 rounded-xl flex items-center justify-center gap-2 cursor-pointer"
                     >
                       <LogOut className="w-4 h-4" />
-                      <span>Sign Out from Sona</span>
+                      <span>Sign Out</span>
                     </Button>
                   </section>
 
-                  {/* Sync and DNA controls */}
+                  {/* Sync Settings */}
                   <section className="premium-card space-y-6">
-                    <h3 className="text-lg font-bold flex items-center gap-2">
-                      <Database className="w-5 h-5 text-accent" />
-                      Spotify Engine
+                    <h3 className="text-lg font-bold uppercase tracking-tight flex items-center gap-2">
+                      <Database className="w-4 h-4" />
+                      Spotify sync
                     </h3>
 
                     <div className="space-y-4">
                       {/* Spotify Data Sync */}
                       <div className="space-y-2">
-                        <div className="flex justify-between items-center text-xs font-mono">
+                        <div className="flex justify-between items-center text-[10px] font-mono">
                           <span className="text-muted-foreground uppercase font-bold">Sync listening history</span>
                           <span className="text-muted-foreground">Last: {lastSynced || 'Never'}</span>
                         </div>
                         <Button
                           onClick={syncData}
                           disabled={syncStatus === 'syncing'}
-                          className="border border-accent bg-accent/10 hover:bg-accent hover:text-accent-foreground text-accent font-mono font-bold text-xs uppercase tracking-wider w-full py-3 rounded-none flex items-center justify-center gap-2 cursor-pointer"
+                          className="border border-border hover:bg-secondary/40 text-foreground font-mono font-bold text-xs uppercase tracking-wider w-full py-3 rounded-xl flex items-center justify-center gap-2 cursor-pointer"
                         >
                           {syncStatus === 'syncing' ? (
                             <>
                               <motion.div animate={{ rotate: 360 }} transition={{ duration: 1.5, repeat: Infinity, ease: "linear" }}>
                                 <RefreshCw className="w-4 h-4" />
                               </motion.div>
-                              <span>Syncing tracks...</span>
+                              <span>Syncing...</span>
                             </>
                           ) : (
                             <>
@@ -215,21 +201,21 @@ export default function Home() {
 
                       {/* Recalculate Music DNA */}
                       <div className="space-y-2 pt-4 border-t border-border/30">
-                        <div className="flex justify-between items-center text-xs font-mono">
+                        <div className="flex justify-between items-center text-[10px] font-mono">
                           <span className="text-muted-foreground uppercase font-bold">Compute Music DNA</span>
                           <span className="text-muted-foreground">Cache: {profile ? 'Active' : 'Empty'}</span>
                         </div>
                         <Button
                           onClick={refreshDNA}
                           disabled={isRefreshingDNA}
-                          className="border border-accent/60 bg-transparent hover:bg-accent/10 text-foreground font-mono font-bold text-xs uppercase tracking-wider w-full py-3 rounded-none flex items-center justify-center gap-2 cursor-pointer"
+                          className="border border-border hover:bg-secondary/40 text-foreground font-mono font-bold text-xs uppercase tracking-wider w-full py-3 rounded-xl flex items-center justify-center gap-2 cursor-pointer"
                         >
                           {isRefreshingDNA ? (
                             <>
                               <motion.div animate={{ rotate: 360 }} transition={{ duration: 1.5, repeat: Infinity, ease: "linear" }}>
                                 <RefreshCw className="w-4 h-4" />
                               </motion.div>
-                              <span>Recalculating DNA...</span>
+                              <span>Recalculating...</span>
                             </>
                           ) : (
                             <>
@@ -245,48 +231,37 @@ export default function Home() {
               </div>
             ) : 
             
-            // DASHBOARD VIEW
+            // DASHBOARD VIEW (Clean and minimal layout)
             (
               <>
-                {/* Dynamic Welcome section & Hero Card */}
-                <div className="premium-card premium-gradient p-8 md:p-12 mb-8 relative overflow-hidden">
-                  <div className="absolute top-0 right-0 w-96 h-96 bg-accent/5 rounded-full blur-3xl -mr-32 -mt-32" />
-                  
+                {/* Welcome section & Hero Card */}
+                <div className="premium-card bg-card border border-border/80 p-8 md:p-12 mb-8 relative overflow-hidden rounded-2xl">
                   <div className="relative z-10 space-y-4">
-                    <p className="text-xs uppercase tracking-widest text-accent font-bold font-mono">
-                      Connected to Spotify
-                    </p>
-                    <h2 className="text-4xl md:text-5xl font-extrabold uppercase tracking-tight mb-2">
+                    <span className="text-[10px] uppercase tracking-widest text-muted-foreground font-bold font-mono">
+                      Spotify Account
+                    </span>
+                    <h2 className="text-4xl md:text-5xl font-extrabold uppercase tracking-tight text-foreground">
                       Hi, {user.name.split(' ')[0]}
                     </h2>
-                    <p className="text-muted-foreground font-mono max-w-xl text-sm leading-relaxed">
-                      Your Sona matrix has indexed {totalPlayCount} plays across {uniqueArtists} artists.
-                      {lastSynced && ` Your dashboard was last synced with Spotify on ${lastSynced}.`}
+                    <p className="text-muted-foreground font-mono text-sm leading-relaxed max-w-xl">
+                      Your music metrics are loaded. You have streamed {totalPlayCount} plays across {uniqueArtistsCount} artists.
                     </p>
                     
                     {/* Stats Row */}
-                    <div className="grid grid-cols-3 gap-6 pt-6 font-mono border-t border-border/30">
+                    <div className="grid grid-cols-2 gap-6 pt-6 font-mono border-t border-border/30">
                       <div>
                         <p className="text-[10px] text-muted-foreground uppercase tracking-widest mb-1">Unique Artists</p>
-                        <p className="text-2xl font-bold text-foreground">{uniqueArtists}</p>
-                      </div>
-                      <div>
-                        <p className="text-[10px] text-muted-foreground uppercase tracking-widest mb-1">Unique Albums</p>
-                        <p className="text-2xl font-bold text-foreground">{uniqueAlbums}</p>
+                        <p className="text-xl font-bold text-foreground">{uniqueArtistsCount}</p>
                       </div>
                       <div>
                         <p className="text-[10px] text-muted-foreground uppercase tracking-widest mb-1">Last Sync</p>
-                        <p className="text-sm font-bold text-accent uppercase pt-1">{syncStatus === 'syncing' ? 'Syncing...' : lastSynced ? 'Completed' : 'Offline'}</p>
+                        <p className="text-sm font-bold text-foreground uppercase pt-1">
+                          {syncStatus === 'syncing' ? 'Syncing...' : lastSynced ? 'Completed' : 'Pending First Sync'}
+                        </p>
                       </div>
                     </div>
                   </div>
                 </div>
-
-                {/* Activity Chart */}
-                <ActivityChart />
-
-                {/* Genre Cards */}
-                <GenreCards />
 
                 {/* Top Artists */}
                 <ContentGrid
@@ -311,21 +286,34 @@ export default function Home() {
 
                 {/* Recently Played */}
                 <div className="mb-12">
-                  <h3 className="text-lg font-semibold mb-6 uppercase tracking-wider font-mono">Recently Played</h3>
+                  <h3 className="text-lg font-bold mb-6 uppercase tracking-wider font-mono text-foreground">Recently Played</h3>
                   
-                  <div className="space-y-2 font-mono">
-                    {recentlyPlayedList.map((track) => (
+                  <div className="space-y-3 font-mono">
+                    {recentlyPlayed.map((track) => (
                       <div
                         key={track.id}
-                        className="premium-card flex items-center justify-between group hover:bg-card/80 cursor-pointer py-4"
+                        className="premium-card flex items-center justify-between group hover:bg-secondary/40 rounded-xl py-4 px-5 border border-border/80 transition-all duration-200 cursor-pointer"
                       >
-                        <div>
-                          <h4 className="font-bold text-foreground group-hover:text-accent transition-colors text-sm uppercase">
-                            {track.name}
-                          </h4>
-                          <p className="text-xs text-muted-foreground">{track.subtitle}</p>
+                        <div className="flex items-center gap-4">
+                          {track.imageUrl ? (
+                            <img
+                              src={track.imageUrl}
+                              alt={track.name}
+                              className="w-10 h-10 object-cover rounded-lg border border-border/30"
+                            />
+                          ) : (
+                            <div className="w-10 h-10 bg-secondary/60 rounded-lg flex items-center justify-center border border-border/30">
+                              <Music className="w-4 h-4 text-muted-foreground/30" />
+                            </div>
+                          )}
+                          <div>
+                            <h4 className="font-bold text-foreground text-sm uppercase leading-tight">
+                              {track.name}
+                            </h4>
+                            <p className="text-xs text-muted-foreground mt-0.5">{track.artistName}</p>
+                          </div>
                         </div>
-                        <span className="text-xs text-muted-foreground">{track.count}</span>
+                        <span className="text-xs text-muted-foreground">{track.playedAt}</span>
                       </div>
                     ))}
                   </div>

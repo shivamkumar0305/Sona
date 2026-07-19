@@ -5,6 +5,14 @@ import { MusicDNAProfile, SpotifyTrackMeta } from '@/types/musicDNA'
 import { MusicDNAService } from '@/services/music-dna/MusicDNAService'
 import { supabase } from '@/lib/supabase'
 
+export interface SpotifyRecentTrack {
+  id: string
+  name: string
+  artistName: string
+  imageUrl: string
+  playedAt: string
+}
+
 interface UserSession {
   name: string
   email: string
@@ -27,6 +35,7 @@ interface AppContextType {
   
   // Dynamic Listening Data
   tracks: SpotifyTrackMeta[]
+  recentlyPlayed: SpotifyRecentTrack[]
   profile: MusicDNAProfile | null
   refreshDNA: () => Promise<void>
   isRefreshingDNA: boolean
@@ -38,6 +47,23 @@ interface AppContextType {
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined)
+
+// Helper to format relative time from timestamp
+function getRelativeTime(timestamp: string): string {
+  const now = new Date()
+  const played = new Date(timestamp)
+  const diffMs = now.getTime() - played.getTime()
+  const diffMins = Math.floor(diffMs / 60000)
+  
+  if (diffMins < 1) return 'Just now'
+  if (diffMins < 60) return `${diffMins}m ago`
+  
+  const diffHours = Math.floor(diffMins / 60)
+  if (diffHours < 24) return `${diffHours}h ago`
+  
+  const diffDays = Math.floor(diffHours / 24)
+  return `${diffDays}d ago`
+}
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<UserSession | null>(null)
@@ -51,6 +77,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   
   // Music DNA States
   const [tracks, setTracks] = useState<SpotifyTrackMeta[]>([])
+  const [recentlyPlayed, setRecentlyPlayed] = useState<SpotifyRecentTrack[]>([])
   const [profile, setProfile] = useState<MusicDNAProfile | null>(null)
   const [isRefreshingDNA, setIsRefreshingDNA] = useState(false)
 
@@ -106,7 +133,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     return () => subscription.unsubscribe()
   }, [])
 
-  // 2. Load cached tracks and profiles on mount
+  // 2. Load cached tracks, recently played, and profiles on mount
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const savedLastSynced = localStorage.getItem('sona_last_synced')
@@ -119,6 +146,19 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         const defaultTracks = MusicDNAService.getMockListeningData()
         setTracks(defaultTracks)
         localStorage.setItem('sona_cached_tracks', JSON.stringify(defaultTracks))
+      }
+
+      const cachedRecent = localStorage.getItem('sona_cached_recent')
+      if (cachedRecent) {
+        setRecentlyPlayed(JSON.parse(cachedRecent))
+      } else {
+        // Fallback simulator recent tracks
+        const mockRecent: SpotifyRecentTrack[] = [
+          { id: 'recent1', name: 'Echo Chamber', artistName: 'Various Artists', imageUrl: '', playedAt: '12m ago' },
+          { id: 'recent2', name: 'Midnight Flow', artistName: 'Luna State', imageUrl: '', playedAt: '2h ago' },
+          { id: 'recent3', name: 'Velocity Zero', artistName: 'Crystal Mind', imageUrl: '', playedAt: 'Yesterday' }
+        ]
+        setRecentlyPlayed(mockRecent)
       }
 
       if (!supabase) {
@@ -190,20 +230,21 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
     localStorage.removeItem('sona_spotify_token')
     localStorage.removeItem('sona_cached_tracks')
+    localStorage.removeItem('sona_cached_recent')
     localStorage.removeItem('sona_last_synced')
     providerTokenRef.current = null
     setUser(null)
     setProfile(null)
     setTracks(MusicDNAService.getMockListeningData())
+    setRecentlyPlayed([])
     setActiveItem('dashboard')
   }
 
   // Spotify Data Sync: Real API fetches or simulator fallback
-  const syncData = async () => {
+  const syncData = useCallback(async () => {
     if (!user) return
     setSyncStatus('syncing')
 
-    // Double check if token is restored from localStorage
     if (!providerTokenRef.current) {
       providerTokenRef.current = localStorage.getItem('sona_spotify_token')
     }
@@ -212,19 +253,43 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       // Real Supabase + Spotify OAuth Token Sync Flow
       if (supabase && providerTokenRef.current) {
         const token = providerTokenRef.current
-        console.log('Initiating Spotify OAuth Fetch with token:', token.substring(0, 15) + '...')
+        console.log('Initiating Spotify OAuth Sync...')
         
         setSyncProgress('Connecting to Spotify APIs...')
         
         // 1. Fetch Top Tracks
         setSyncProgress('Syncing Top Tracks...')
-        const tracksRes = await fetch('https://api.spotify.com/v1/me/top/tracks?limit=30&time_range=medium_term', {
+        const tracksRes = await fetch('https://api.spotify.com/v1/me/top/tracks?limit=25&time_range=medium_term', {
           headers: { Authorization: `Bearer ${token}` }
         })
-        if (!tracksRes.ok) throw new Error(`Spotify tracks fetch returned status ${tracksRes.status}`)
+        if (!tracksRes.ok) throw new Error(`Tracks fetch returned status ${tracksRes.status}`)
         const tracksData = await tracksRes.json()
+
+        // 2. Fetch Artists details (GENRES and IMAGES) for all unique artists in the top tracks!
+        setSyncProgress('Syncing artist genres and details...')
+        const artistIds = Array.from(
+          new Set(tracksData.items.map((t: any) => t.artists[0]?.id).filter(Boolean))
+        )
         
-        // 2. Fetch Audio Features
+        let artistGenresMap: { [id: string]: string[] } = {}
+        let artistImagesMap: { [id: string]: string } = {}
+        
+        if (artistIds.length > 0) {
+          const artistsRes = await fetch(`https://api.spotify.com/v1/artists?ids=${artistIds.slice(0, 50).join(',')}`, {
+            headers: { Authorization: `Bearer ${token}` }
+          })
+          if (artistsRes.ok) {
+            const artistsData = await artistsRes.json()
+            artistsData.artists.forEach((art: any) => {
+              if (art) {
+                artistGenresMap[art.id] = art.genres || []
+                artistImagesMap[art.id] = art.images?.[0]?.url || ''
+              }
+            })
+          }
+        }
+
+        // 3. Fetch Audio Features
         setSyncProgress('Syncing Audio features analysis...')
         const trackIds = tracksData.items.map((t: any) => t.id)
         let audioFeaturesMap: { [id: string]: any } = {}
@@ -250,40 +315,51 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           }
         }
 
-        // 3. Fetch Top Artists (to extract genre descriptors)
-        setSyncProgress('Syncing Top Artists...')
-        const artistsRes = await fetch('https://api.spotify.com/v1/me/top/artists?limit=20&time_range=medium_term', {
+        // 4. Fetch Recently Played
+        setSyncProgress('Syncing Recently Played...')
+        const recentRes = await fetch('https://api.spotify.com/v1/me/player/recently-played?limit=10', {
           headers: { Authorization: `Bearer ${token}` }
         })
-        let artistGenresMap: { [name: string]: string[] } = {}
-        if (artistsRes.ok) {
-          const artistsData = await artistsRes.json()
-          artistsData.items.forEach((artist: any) => {
-            artistGenresMap[artist.name] = artist.genres || []
-          })
+        let mappedRecent: SpotifyRecentTrack[] = []
+        if (recentRes.ok) {
+          const recentData = await recentRes.json()
+          mappedRecent = recentData.items.map((item: any) => ({
+            id: item.track.id + '-' + item.played_at,
+            name: item.track.name,
+            artistName: item.track.artists?.[0]?.name || '',
+            imageUrl: item.track.album?.images?.[0]?.url || '',
+            playedAt: getRelativeTime(item.played_at)
+          }))
         }
+        setRecentlyPlayed(mappedRecent)
+        localStorage.setItem('sona_cached_recent', JSON.stringify(mappedRecent))
 
-        // 4. Map to Sona Track Formats
+        // 5. Map to Sona Track Formats
         setSyncProgress('Mapping taste index parameters...')
-        const mappedTracks: SpotifyTrackMeta[] = tracksData.items.map((item: any) => ({
-          id: item.id,
-          name: item.name,
-          popularity: item.popularity,
-          albumId: item.album.id,
-          albumName: item.album.name,
-          artistId: item.artists[0]?.id || '',
-          artistName: item.artists[0]?.name || '',
-          genres: artistGenresMap[item.artists[0]?.name] || ['pop'],
-          playCount: Math.floor(Math.random() * 10) + 5, // Simulated count weight
-          audioFeatures: audioFeaturesMap[item.id] || {
-            energy: 0.5,
-            acousticness: 0.2,
-            instrumentalness: 0.1,
-            danceability: 0.5,
-            valence: 0.5,
-            tempo: 110
+        const mappedTracks: SpotifyTrackMeta[] = tracksData.items.map((item: any) => {
+          const primaryArtistId = item.artists[0]?.id || ''
+          return {
+            id: item.id,
+            name: item.name,
+            popularity: item.popularity,
+            albumId: item.album.id,
+            albumName: item.album.name,
+            artistId: primaryArtistId,
+            artistName: item.artists[0]?.name || '',
+            genres: artistGenresMap[primaryArtistId] || ['pop'],
+            playCount: Math.floor(Math.random() * 10) + 5,
+            imageUrl: item.album.images?.[0]?.url || '',
+            artistImageUrl: artistImagesMap[primaryArtistId] || '',
+            audioFeatures: audioFeaturesMap[item.id] || {
+              energy: 0.5,
+              acousticness: 0.2,
+              instrumentalness: 0.1,
+              danceability: 0.5,
+              valence: 0.5,
+              tempo: 110
+            }
           }
-        }))
+        })
 
         setTracks(mappedTracks)
         localStorage.setItem('sona_cached_tracks', JSON.stringify(mappedTracks))
@@ -296,8 +372,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         
         console.log('Real Spotify Sync successful! Stored tracks count:', mappedTracks.length)
       } else {
-        // Fallback to high-fidelity simulator sync if offline / keys missing / token absent
-        console.log('No Spotify OAuth Token found. Running Simulator fallback sync.')
+        // Fallback to simulator sync
+        console.log('No Spotify OAuth Token found. Running Simulator sync.')
         const steps = [
           { msg: 'Connecting to Spotify OAuth...', delay: 800 },
           { msg: 'Importing Top Artists from listening history...', delay: 900 },
@@ -323,6 +399,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         const newDNA = MusicDNAService.calculateDNA(randomizedTracks)
         const updatedProfile = await MusicDNAService.saveProfile('user-sona-id', newDNA)
         setProfile(updatedProfile)
+
+        const mockRecent: SpotifyRecentTrack[] = [
+          { id: 'recent1', name: 'Echo Chamber', artistName: 'Various Artists', imageUrl: '', playedAt: '2m ago' },
+          { id: 'recent2', name: 'Midnight Flow', artistName: 'Luna State', imageUrl: '', playedAt: '45m ago' },
+          { id: 'recent3', name: 'Velocity Zero', artistName: 'Crystal Mind', imageUrl: '', playedAt: 'Yesterday' }
+        ]
+        setRecentlyPlayed(mockRecent)
+        localStorage.setItem('sona_cached_recent', JSON.stringify(mockRecent))
       }
 
       const now = new Date().toLocaleString()
@@ -340,7 +424,17 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       setSyncStatus('idle')
       setSyncProgress('')
     }, 3000)
-  }
+  }, [user])
+
+  // 4. Auto-trigger sync on first login (if lastSynced is null)
+  useEffect(() => {
+    if (user && !lastSynced && syncStatus === 'idle') {
+      const token = providerTokenRef.current || localStorage.getItem('sona_spotify_token')
+      if (token) {
+        syncData()
+      }
+    }
+  }, [user, lastSynced, syncStatus, syncData])
 
   // Manual Refresh Music DNA
   const refreshDNA = async () => {
@@ -371,6 +465,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         syncProgress,
         syncData,
         tracks,
+        recentlyPlayed,
         profile,
         refreshDNA,
         isRefreshingDNA,

@@ -10,14 +10,14 @@ interface DNAHorizontalBarProps {
   delay?: number
 }
 
-export function DNAHorizontalBar({ label, value, colorClass = "from-accent to-accent/60", delay = 0 }: DNAHorizontalBarProps) {
+export function DNAHorizontalBar({ label, value, colorClass = "from-foreground to-foreground/60", delay = 0 }: DNAHorizontalBarProps) {
   return (
     <div className="space-y-2">
-      <div className="flex justify-between items-center text-sm">
-        <span className="text-muted-foreground font-medium">{label}</span>
-        <span className="font-semibold text-foreground">{value}%</span>
+      <div className="flex justify-between items-center text-xs font-mono">
+        <span className="text-muted-foreground uppercase font-bold">{label}</span>
+        <span className="font-bold text-foreground">{value}%</span>
       </div>
-      <div className="h-2 w-full bg-secondary/50 rounded-full overflow-hidden border border-border/20">
+      <div className="h-2 w-full bg-secondary rounded-full overflow-hidden border border-border/40">
         <motion.div
           className={cn("h-full rounded-full bg-gradient-to-r", colorClass)}
           initial={{ width: 0 }}
@@ -42,9 +42,9 @@ interface DNACircularProgressProps {
 export function DNACircularProgress({
   label,
   value,
-  size = 120,
-  strokeWidth = 8,
-  color = "oklch(0.65 0.18 40)", // accent
+  size = 110,
+  strokeWidth = 6,
+  color = "currentColor",
   delay = 0,
   sublabel
 }: DNACircularProgressProps) {
@@ -53,7 +53,7 @@ export function DNACircularProgress({
   const offset = circumference - (value / 100) * circumference
 
   return (
-    <div className="flex flex-col items-center justify-center p-6 bg-card/40 rounded-2xl border border-border/50 backdrop-blur-sm group hover:border-accent/40 transition-colors duration-300">
+    <div className="flex flex-col items-center justify-center p-5 bg-card rounded-xl border border-border/80 hover:border-foreground/30 transition-all duration-200 group">
       <div className="relative" style={{ width: size, height: size }}>
         <svg className="w-full h-full transform -rotate-90">
           {/* Background circle */}
@@ -74,7 +74,7 @@ export function DNACircularProgress({
             animate={{ strokeDashoffset: offset }}
             transition={{ duration: 1.2, delay, ease: "easeOut" }}
             strokeLinecap="round"
-            stroke={color}
+            stroke={color === "currentColor" ? "var(--foreground)" : color}
             fill="transparent"
             r={radius}
             cx={size / 2}
@@ -83,13 +83,15 @@ export function DNACircularProgress({
         </svg>
         {/* Value Text display */}
         <div className="absolute inset-0 flex flex-col items-center justify-center">
-          <span className="text-2xl font-bold tracking-tight text-foreground">{value}%</span>
-          {sublabel && <span className="text-[10px] text-muted-foreground uppercase tracking-wider">{sublabel}</span>}
+          <span className="text-xl font-bold tracking-tight text-foreground font-mono">{value}%</span>
+          {sublabel && <span className="text-[9px] text-muted-foreground uppercase tracking-wider font-mono">{sublabel}</span>}
         </div>
       </div>
-      <span className="mt-4 font-semibold text-sm text-center text-foreground group-hover:text-accent transition-colors">
-        {label}
-      </span>
+      {label && (
+        <span className="mt-3 font-mono font-bold text-xs uppercase tracking-wider text-muted-foreground group-hover:text-foreground transition-colors">
+          {label}
+        </span>
+      )}
     </div>
   )
 }
@@ -104,13 +106,13 @@ interface DNAMetricPillProps {
 export function DNAMetricPill({ label, value, icon, className }: DNAMetricPillProps) {
   return (
     <div className={cn(
-      "flex items-center gap-3 px-4 py-2.5 bg-card/60 border border-border/40 hover:border-border rounded-full backdrop-blur-sm transition-all duration-300",
+      "flex items-center gap-2.5 px-4 py-2 bg-card border border-border/80 hover:border-border rounded-full transition-all duration-200 shadow-sm",
       className
     )}>
-      {icon && <div className="text-accent">{icon}</div>}
+      {icon && <div className="text-foreground">{icon}</div>}
       <div className="flex flex-col">
-        <span className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">{label}</span>
-        <span className="text-sm font-bold text-foreground">{value}</span>
+        <span className="text-[9px] text-muted-foreground uppercase tracking-widest font-mono font-bold">{label}</span>
+        <span className="text-xs font-bold text-foreground font-mono leading-none mt-0.5">{value}</span>
       </div>
     </div>
   )
@@ -124,21 +126,21 @@ interface DNARadialCardProps {
   delay?: number
 }
 
-export function DNARadialCard({ title, description, value, colorClass = "from-accent to-accent/40", delay = 0 }: DNARadialCardProps) {
+export function DNARadialCard({ title, description, value, colorClass = "var(--foreground)", delay = 0 }: DNARadialCardProps) {
   return (
-    <div className="premium-card premium-gradient overflow-hidden relative group">
-      <div className="absolute top-0 right-0 w-32 h-32 bg-accent/5 rounded-full blur-2xl group-hover:bg-accent/10 transition-colors duration-300" />
+    <div className="premium-card bg-card border border-border/80 rounded-xl overflow-hidden relative group p-6">
       <div className="relative z-10 flex items-center justify-between gap-6">
         <div className="space-y-2">
-          <h4 className="text-lg font-bold text-foreground">{title}</h4>
-          <p className="text-sm text-muted-foreground leading-relaxed">{description}</p>
+          <h4 className="text-sm font-bold text-foreground uppercase tracking-tight">{title}</h4>
+          <p className="text-xs text-muted-foreground font-mono leading-relaxed max-w-sm">{description}</p>
         </div>
         <div className="flex-shrink-0">
           <DNACircularProgress
             label=""
             value={value}
-            size={80}
-            strokeWidth={6}
+            size={70}
+            strokeWidth={5}
+            color={colorClass}
             delay={delay}
           />
         </div>
