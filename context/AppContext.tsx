@@ -120,13 +120,20 @@ function cachedRecentHaveMissingImages(tracks: SpotifyRecentTrack[] | null): boo
 
 function getSiteOrigin(): string {
   const configuredUrl = process.env.NEXT_PUBLIC_SITE_URL?.trim()
-  if (configuredUrl) return configuredUrl.replace(/\/$/, '')
-
   if (typeof window !== 'undefined') {
+    const isBrowserLocalhost = ['localhost', '127.0.0.1'].includes(window.location.hostname)
+    const isConfiguredLocalhost = configuredUrl
+      ? /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?/i.test(configuredUrl)
+      : false
+
+    if (configuredUrl && (!isConfiguredLocalhost || isBrowserLocalhost)) {
+      return configuredUrl.replace(/\/$/, '')
+    }
+
     return window.location.origin
   }
 
-  return ''
+  return configuredUrl?.replace(/\/$/, '') || ''
 }
 
 function getAuthRedirectUrl(): string {
