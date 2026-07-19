@@ -1,77 +1,77 @@
 'use client'
 
-import { Search, Bell, Settings, RefreshCw } from 'lucide-react'
+import { Search, RefreshCw } from 'lucide-react'
 import { useApp } from '@/context/AppContext'
 import { motion } from 'framer-motion'
 
 export default function TopBar() {
   const { user, syncStatus, syncProgress } = useApp()
 
-  // Get initials of user display name
-  const getInitials = (name: string) => {
-    return name
-      .split(' ')
-      .map((n) => n[0])
-      .join('')
-      .toUpperCase()
-  }
+  const getInitials = (name: string) =>
+    name.split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2)
 
   return (
-    <div className="h-16 border-b border-border flex items-center justify-between px-8 sticky top-0 z-40 bg-background/80 backdrop-blur-sm">
-      {/* Search Bar / Sync Indicator */}
-      <div className="flex-1 max-w-md flex items-center gap-4">
+    <div className="topbar h-14 flex items-center justify-between px-7 gap-4">
+      {/* Left: Search or Sync status */}
+      <div className="flex-1 max-w-xs">
         {syncStatus === 'syncing' ? (
-          <div className="flex items-center gap-2 text-accent font-mono text-xs uppercase tracking-wider animate-pulse">
+          <div className="flex items-center gap-2.5 text-muted-foreground" style={{ fontFamily: 'var(--font-space-mono)' }}>
             <motion.div
               animate={{ rotate: 360 }}
-              transition={{ duration: 1.5, repeat: Infinity, ease: "linear" }}
+              transition={{ duration: 1.5, repeat: Infinity, ease: 'linear' }}
             >
               <RefreshCw className="w-3 h-3" />
             </motion.div>
-            <span>{syncProgress}</span>
+            <span className="text-[10px] uppercase tracking-widest font-bold animate-pulse">
+              {syncProgress}
+            </span>
           </div>
         ) : (
-          <div className="relative w-full">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground/60 pointer-events-none" />
             <input
               type="text"
-              placeholder="Search songs, artists..."
-              className="w-full pl-10 pr-4 py-2 bg-card border border-border rounded-none text-xs font-mono text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-accent transition-colors"
+              placeholder="Search…"
+              className="w-full pl-9 pr-4 py-2 bg-secondary border border-border rounded-xl text-[11px] text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:border-foreground/30 focus:bg-card transition-all duration-200"
+              style={{ fontFamily: 'var(--font-space-mono)' }}
             />
           </div>
         )}
       </div>
 
-      {/* Right Actions */}
-      <div className="flex items-center gap-4">
-        <button className="w-10 h-10 rounded-none hover:bg-card transition-colors flex items-center justify-center border border-transparent hover:border-border cursor-pointer">
-          <Bell className="w-4 h-4 text-muted-foreground hover:text-foreground transition-colors" />
-        </button>
-        <button className="w-10 h-10 rounded-none hover:bg-card transition-colors flex items-center justify-center border border-transparent hover:border-border cursor-pointer">
-          <Settings className="w-4 h-4 text-muted-foreground hover:text-foreground transition-colors" />
-        </button>
-        
-        {user && (
-          <div className="flex items-center gap-3">
-            <div className="hidden sm:flex flex-col items-end">
-              <span className="text-xs font-bold text-foreground font-mono">{user.name}</span>
-              <span className="text-[10px] text-muted-foreground font-mono lowercase">{user.spotifyUser}</span>
-            </div>
-            {user.profilePic ? (
-              <img
-                src={user.profilePic}
-                alt={user.name}
-                className="w-9 h-9 rounded-none border border-border object-cover"
-              />
-            ) : (
-              <div className="w-9 h-9 rounded-none bg-accent text-accent-foreground flex items-center justify-center text-xs font-bold font-mono">
-                {getInitials(user.name)}
-              </div>
-            )}
+      {/* Right: User pill */}
+      {user && (
+        <div className="flex items-center gap-3 pl-3 border-l border-border">
+          <div className="hidden sm:flex flex-col items-end">
+            <span
+              className="text-[11px] font-bold text-foreground leading-tight"
+              style={{ fontFamily: 'var(--font-space-mono)' }}
+            >
+              {user.name}
+            </span>
+            <span
+              className="text-[9px] text-muted-foreground leading-tight mt-0.5"
+              style={{ fontFamily: 'var(--font-space-mono)' }}
+            >
+              {user.spotifyUser}
+            </span>
           </div>
-        )}
-      </div>
+          {user.profilePic ? (
+            <img
+              src={user.profilePic}
+              alt={user.name}
+              className="w-8 h-8 rounded-full border border-border object-cover flex-shrink-0"
+            />
+          ) : (
+            <div
+              className="w-8 h-8 rounded-full bg-foreground text-background flex items-center justify-center text-[10px] font-bold flex-shrink-0"
+              style={{ fontFamily: 'var(--font-space-mono)' }}
+            >
+              {getInitials(user.name)}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   )
 }
-

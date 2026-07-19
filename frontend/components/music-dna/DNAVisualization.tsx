@@ -10,25 +10,30 @@ interface DNAHorizontalBarProps {
   delay?: number
 }
 
-export function DNAHorizontalBar({ label, value, colorClass = "from-foreground to-foreground/60", delay = 0 }: DNAHorizontalBarProps) {
+export function DNAHorizontalBar({ label, value, colorClass = 'from-foreground to-foreground/60', delay = 0 }: DNAHorizontalBarProps) {
   return (
     <div className="space-y-2">
-      <div className="flex justify-between items-center text-xs font-mono">
-        <span className="text-muted-foreground uppercase font-bold">{label}</span>
-        <span className="font-bold text-foreground">{value}%</span>
+      <div className="flex justify-between items-center">
+        <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground" style={{ fontFamily: 'var(--font-space-mono)' }}>
+          {label}
+        </span>
+        <span className="text-[11px] font-bold text-foreground" style={{ fontFamily: 'var(--font-space-mono)' }}>
+          {value}%
+        </span>
       </div>
-      <div className="h-2 w-full bg-secondary rounded-full overflow-hidden border border-border/40">
+      <div className="progress-track">
         <motion.div
-          className={cn("h-full rounded-full bg-gradient-to-r", colorClass)}
+          className={cn('h-full rounded-full bg-gradient-to-r', colorClass)}
           initial={{ width: 0 }}
           animate={{ width: `${value}%` }}
-          transition={{ duration: 1, delay, ease: "easeOut" }}
+          transition={{ duration: 0.9, delay, ease: 'easeOut' }}
         />
       </div>
     </div>
   )
 }
 
+/* ─── Circular Progress ─── */
 interface DNACircularProgressProps {
   label: string
   value: number
@@ -36,59 +41,46 @@ interface DNACircularProgressProps {
   strokeWidth?: number
   color?: string
   delay?: number
-  sublabel?: string
 }
 
-export function DNACircularProgress({
-  label,
-  value,
-  size = 110,
-  strokeWidth = 6,
-  color = "currentColor",
-  delay = 0,
-  sublabel
-}: DNACircularProgressProps) {
-  const radius = (size - strokeWidth) / 2
+export function DNACircularProgress({ label, value, size = 110, strokeWidth = 5, color, delay = 0 }: DNACircularProgressProps) {
+  const radius = (size - strokeWidth * 2) / 2
   const circumference = radius * 2 * Math.PI
   const offset = circumference - (value / 100) * circumference
+  const stroke = color || 'var(--foreground)'
 
   return (
-    <div className="flex flex-col items-center justify-center p-5 bg-card rounded-xl border border-border/80 hover:border-foreground/30 transition-all duration-200 group">
+    <div className="premium-card flex flex-col items-center justify-center gap-3 py-6">
       <div className="relative" style={{ width: size, height: size }}>
-        <svg className="w-full h-full transform -rotate-90">
-          {/* Background circle */}
+        <svg className="w-full h-full -rotate-90">
           <circle
-            className="text-secondary"
-            strokeWidth={strokeWidth}
-            stroke="currentColor"
+            cx={size / 2} cy={size / 2} r={radius}
+            strokeWidth={strokeWidth} stroke="var(--secondary)"
             fill="transparent"
-            r={radius}
-            cx={size / 2}
-            cy={size / 2}
           />
-          {/* Active progress */}
           <motion.circle
+            cx={size / 2} cy={size / 2} r={radius}
             strokeWidth={strokeWidth}
             strokeDasharray={circumference}
             initial={{ strokeDashoffset: circumference }}
             animate={{ strokeDashoffset: offset }}
-            transition={{ duration: 1.2, delay, ease: "easeOut" }}
+            transition={{ duration: 1.1, delay, ease: 'easeOut' }}
             strokeLinecap="round"
-            stroke={color === "currentColor" ? "var(--foreground)" : color}
+            stroke={stroke}
             fill="transparent"
-            r={radius}
-            cx={size / 2}
-            cy={size / 2}
           />
         </svg>
-        {/* Value Text display */}
         <div className="absolute inset-0 flex flex-col items-center justify-center">
-          <span className="text-xl font-bold tracking-tight text-foreground font-mono">{value}%</span>
-          {sublabel && <span className="text-[9px] text-muted-foreground uppercase tracking-wider font-mono">{sublabel}</span>}
+          <span className="text-xl font-extrabold text-foreground" style={{ fontFamily: 'var(--font-syne)' }}>
+            {value}
+          </span>
+          <span className="text-[8px] text-muted-foreground uppercase tracking-widest" style={{ fontFamily: 'var(--font-space-mono)' }}>
+            /100
+          </span>
         </div>
       </div>
       {label && (
-        <span className="mt-3 font-mono font-bold text-xs uppercase tracking-wider text-muted-foreground group-hover:text-foreground transition-colors">
+        <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground" style={{ fontFamily: 'var(--font-space-mono)' }}>
           {label}
         </span>
       )}
@@ -96,6 +88,7 @@ export function DNACircularProgress({
   )
 }
 
+/* ─── Metric Pill ─── */
 interface DNAMetricPillProps {
   label: string
   value: number | string
@@ -105,19 +98,17 @@ interface DNAMetricPillProps {
 
 export function DNAMetricPill({ label, value, icon, className }: DNAMetricPillProps) {
   return (
-    <div className={cn(
-      "flex items-center gap-2.5 px-4 py-2 bg-card border border-border/80 hover:border-border rounded-full transition-all duration-200 shadow-sm",
-      className
-    )}>
-      {icon && <div className="text-foreground">{icon}</div>}
-      <div className="flex flex-col">
-        <span className="text-[9px] text-muted-foreground uppercase tracking-widest font-mono font-bold">{label}</span>
-        <span className="text-xs font-bold text-foreground font-mono leading-none mt-0.5">{value}</span>
+    <div className={cn('flex items-center gap-2.5 px-4 py-2.5 bg-card border border-border rounded-full hover:border-foreground/25 transition-colors', className)}>
+      {icon && <div className="text-muted-foreground">{icon}</div>}
+      <div>
+        <p className="text-[9px] text-muted-foreground uppercase tracking-widest font-bold" style={{ fontFamily: 'var(--font-space-mono)' }}>{label}</p>
+        <p className="text-[11px] font-bold text-foreground leading-tight" style={{ fontFamily: 'var(--font-space-mono)' }}>{value}</p>
       </div>
     </div>
   )
 }
 
+/* ─── Radial Card (inline circular) ─── */
 interface DNARadialCardProps {
   title: string
   description: string
@@ -126,25 +117,18 @@ interface DNARadialCardProps {
   delay?: number
 }
 
-export function DNARadialCard({ title, description, value, colorClass = "var(--foreground)", delay = 0 }: DNARadialCardProps) {
+export function DNARadialCard({ title, description, value, delay = 0 }: DNARadialCardProps) {
   return (
-    <div className="premium-card bg-card border border-border/80 rounded-xl overflow-hidden relative group p-6">
-      <div className="relative z-10 flex items-center justify-between gap-6">
-        <div className="space-y-2">
-          <h4 className="text-sm font-bold text-foreground uppercase tracking-tight">{title}</h4>
-          <p className="text-xs text-muted-foreground font-mono leading-relaxed max-w-sm">{description}</p>
-        </div>
-        <div className="flex-shrink-0">
-          <DNACircularProgress
-            label=""
-            value={value}
-            size={70}
-            strokeWidth={5}
-            color={colorClass}
-            delay={delay}
-          />
-        </div>
+    <div className="premium-card flex items-center justify-between gap-6">
+      <div className="space-y-1.5 flex-1 min-w-0">
+        <p className="text-xs font-extrabold text-foreground uppercase tracking-tight" style={{ fontFamily: 'var(--font-syne)' }}>
+          {title}
+        </p>
+        <p className="text-[10px] text-muted-foreground leading-relaxed" style={{ fontFamily: 'var(--font-space-mono)' }}>
+          {description}
+        </p>
       </div>
+      <DNACircularProgress label="" value={value} size={72} strokeWidth={5} delay={delay} />
     </div>
   )
 }

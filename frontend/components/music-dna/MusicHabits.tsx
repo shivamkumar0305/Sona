@@ -1,92 +1,91 @@
 'use client'
 
-import { MusicDNAProfile, ListeningHabitInsight } from '@/types/musicDNA'
+import { MusicDNAProfile } from '@/types/musicDNA'
 import { motion } from 'framer-motion'
 import { Disc, RotateCcw, Compass, Users, Sparkles } from 'lucide-react'
 
-interface MusicHabitsProps {
-  profile: MusicDNAProfile
-}
+interface MusicHabitsProps { profile: MusicDNAProfile }
 
 export function MusicHabits({ profile }: MusicHabitsProps) {
-  const habits: (ListeningHabitInsight & { icon: React.ReactNode })[] = [
+  const habits = [
     {
       id: 'album',
-      title: 'Album Listener',
-      percentage: profile.album_listener,
-      icon: <Disc className="w-4 h-4" />,
-      shortExplanation: profile.album_listener > 60
-        ? 'You love full-album journeys, preferring cohesive structural stories over random hits.'
-        : 'You prefer curated tracks and playlist-hopping over sitting through full-length albums.'
+      label: 'Album Listener',
+      value: profile.album_listener,
+      icon: <Disc className="w-3.5 h-3.5" />,
+      note: profile.album_listener > 60
+        ? 'You prefer full-album journeys and cohesive artist narratives.'
+        : 'You thrive on curated playlists and track-by-track exploration.',
     },
     {
       id: 'replay',
-      title: 'Replay Rate',
-      percentage: profile.replay_rate,
-      icon: <RotateCcw className="w-4 h-4" />,
-      shortExplanation: profile.replay_rate > 55
-        ? 'You have deep musical roots, frequently revisiting favorite anthems for comfort.'
-        : 'You are a fast explorer, rarely looping the same track twice and constantly seeking new vibes.'
+      label: 'Replay Rate',
+      value: profile.replay_rate,
+      icon: <RotateCcw className="w-3.5 h-3.5" />,
+      note: profile.replay_rate > 55
+        ? 'You return to favourite tracks often, valuing depth over breadth.'
+        : 'You rarely loop the same track twice — always seeking the next thing.',
     },
     {
       id: 'discovery',
-      title: 'Discovery Score',
-      percentage: profile.discovery,
-      icon: <Compass className="w-4 h-4" />,
-      shortExplanation: profile.discovery > 60
-        ? 'You actively hunt for rising talent and underground sounds outside your rotation.'
-        : 'You prefer sticking to familiar records and trusting your established libraries.'
+      label: 'Discovery',
+      value: profile.discovery,
+      icon: <Compass className="w-3.5 h-3.5" />,
+      note: profile.discovery > 60
+        ? 'You actively explore underground artists and emerging sounds.'
+        : 'You build trust in a curated set of established artists.',
     },
     {
-      id: 'popularity',
-      title: 'Popularity Bias',
-      percentage: profile.mainstream,
-      icon: <Users className="w-4 h-4" />,
-      shortExplanation: profile.mainstream > 65
-        ? 'Your taste leans toward chart-toppers and cultural sensations that define the moment.'
-        : 'You actively avoid the mainstream, curating a highly distinct niche library.'
+      id: 'mainstream',
+      label: 'Mainstream Lean',
+      value: profile.mainstream,
+      icon: <Users className="w-3.5 h-3.5" />,
+      note: profile.mainstream > 65
+        ? 'Your taste gravitates toward chart-defining cultural moments.'
+        : 'You actively avoid the mainstream, carving a distinct niche.',
     },
     {
-      id: 'genre_diversity',
-      title: 'Genre Diversity',
-      percentage: Math.round((100 - profile.mainstream + profile.experimental) / 2),
-      icon: <Sparkles className="w-4 h-4" />,
-      shortExplanation: Math.round((100 - profile.mainstream + profile.experimental) / 2) > 45
-        ? 'You bridge disparate cultures, moving between standard pop, IDM, and indie folk seamlessly.'
-        : 'You maintain a highly focused palette centered around specific signature genres.'
-    }
+      id: 'diversity',
+      label: 'Genre Diversity',
+      value: Math.round((100 - profile.mainstream + profile.experimental) / 2),
+      icon: <Sparkles className="w-3.5 h-3.5" />,
+      note: Math.round((100 - profile.mainstream + profile.experimental) / 2) > 45
+        ? 'You move fluidly across genres, from ambient to trap without friction.'
+        : 'You maintain a focused, consistent sonic palette.',
+    },
   ]
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-      {habits.map((habit, index) => (
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      {habits.map((h, i) => (
         <motion.div
-          key={habit.id}
-          className="premium-card bg-card border border-border/80 hover:border-foreground/30 rounded-xl flex flex-col justify-between p-5"
-          initial={{ opacity: 0, y: 15 }}
+          key={h.id}
+          initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4, delay: index * 0.05 }}
+          transition={{ duration: 0.35, delay: i * 0.06 }}
+          className="premium-card flex flex-col gap-4"
         >
-          <div>
-            <div className="flex items-center justify-between mb-4">
-              <div className="w-8 h-8 rounded-lg bg-secondary text-foreground flex items-center justify-center border border-border/60">
-                {habit.icon}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2.5">
+              <div className="w-7 h-7 rounded-lg bg-secondary border border-border flex items-center justify-center text-muted-foreground flex-shrink-0">
+                {h.icon}
               </div>
-              <span className="text-lg font-bold text-foreground font-mono">{habit.percentage}%</span>
+              <span className="text-[10px] font-bold uppercase tracking-widest text-foreground" style={{ fontFamily: 'var(--font-space-mono)' }}>
+                {h.label}
+              </span>
             </div>
-            
-            <h4 className="font-bold text-foreground text-xs uppercase tracking-tight mb-2">{habit.title}</h4>
-            <p className="text-xs text-muted-foreground font-mono leading-relaxed">{habit.shortExplanation}</p>
+            <span className="text-sm font-extrabold text-foreground" style={{ fontFamily: 'var(--font-syne)' }}>
+              {h.value}%
+            </span>
           </div>
 
-          <div className="mt-4 pt-4 border-t border-border/30">
-            <div className="h-1.5 w-full bg-secondary rounded-full overflow-hidden border border-border/20">
-              <div
-                className="h-full bg-foreground rounded-full"
-                style={{ width: `${habit.percentage}%` }}
-              />
-            </div>
+          <div className="progress-track">
+            <div className="progress-fill" style={{ width: `${h.value}%` }} />
           </div>
+
+          <p className="text-[10px] text-muted-foreground leading-relaxed" style={{ fontFamily: 'var(--font-space-mono)' }}>
+            {h.note}
+          </p>
         </motion.div>
       ))}
     </div>

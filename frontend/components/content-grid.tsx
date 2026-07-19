@@ -12,62 +12,51 @@ interface ContentGridProps {
     imageUrl?: string
   }>
   icon?: 'music' | 'trending' | 'chart'
+  square?: boolean
 }
 
-export default function ContentGrid({ title, items, icon = 'music' }: ContentGridProps) {
-  const getIcon = () => {
-    switch (icon) {
-      case 'trending':
-        return <TrendingUp className="w-4 h-4" />
-      case 'chart':
-        return <BarChart3 className="w-4 h-4" />
-      default:
-        return <Music className="w-4 h-4" />
-    }
-  }
-
+export default function ContentGrid({ title, items, icon = 'music', square = false }: ContentGridProps) {
   return (
-    <div className="mb-12">
-      <div className="flex items-center gap-3 mb-6">
-        <div className="w-8 h-8 rounded-lg bg-secondary flex items-center justify-center text-foreground border border-border">
-          {getIcon()}
-        </div>
-        <h3 className="text-lg font-bold tracking-tight text-foreground uppercase">{title}</h3>
-      </div>
-      
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+    <div>
+      <p className="section-title">{title}</p>
+
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
         {items.map((item) => (
           <div
             key={item.id}
-            className="premium-card bg-card border border-border/80 hover:border-foreground/40 rounded-xl p-5 transition-all duration-200 cursor-pointer flex flex-col justify-between"
+            className="group flex flex-col gap-3 cursor-pointer"
           >
-            <div>
-              {/* Image Rendering */}
+            {/* Art */}
+            <div className={`relative overflow-hidden border border-border bg-secondary ${square ? 'aspect-square' : 'aspect-[3/4]'} rounded-2xl`}>
               {item.imageUrl ? (
                 <img
                   src={item.imageUrl}
                   alt={item.name}
-                  className="w-full h-40 object-cover rounded-lg mb-4 border border-border/40"
+                  className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
                 />
               ) : (
-                <div className="w-full h-40 bg-secondary/40 rounded-lg mb-4 flex items-center justify-center border border-border/30">
-                  <Music className="w-8 h-8 text-muted-foreground/30" />
+                <div className="w-full h-full flex items-center justify-center">
+                  <Music className="w-6 h-6 text-muted-foreground/30" />
                 </div>
               )}
+            </div>
 
-              <div className="flex items-start justify-between gap-3">
-                <div className="space-y-1">
-                  <h4 className="font-bold text-foreground text-sm leading-tight uppercase tracking-tight">
-                    {item.name}
-                  </h4>
-                  <p className="text-xs text-muted-foreground font-medium">{item.subtitle}</p>
-                </div>
-                {item.count && (
-                  <span className="text-[10px] font-bold text-foreground bg-secondary border border-border px-2 py-0.5 rounded-md flex-shrink-0 uppercase">
-                    {item.count}
-                  </span>
-                )}
-              </div>
+            {/* Info */}
+            <div className="space-y-0.5 min-w-0 px-0.5">
+              <p
+                className="text-xs font-bold text-foreground truncate leading-tight group-hover:underline decoration-dotted underline-offset-2"
+                style={{ fontFamily: 'var(--font-syne)', letterSpacing: '-0.01em' }}
+              >
+                {item.name}
+              </p>
+              <p className="text-[10px] text-muted-foreground truncate" style={{ fontFamily: 'var(--font-space-mono)' }}>
+                {item.subtitle}
+              </p>
+              {item.count && (
+                <p className="text-[9px] font-bold text-muted-foreground/60 uppercase tracking-wider" style={{ fontFamily: 'var(--font-space-mono)' }}>
+                  {item.count}
+                </p>
+              )}
             </div>
           </div>
         ))}
@@ -75,4 +64,3 @@ export default function ContentGrid({ title, items, icon = 'music' }: ContentGri
     </div>
   )
 }
-

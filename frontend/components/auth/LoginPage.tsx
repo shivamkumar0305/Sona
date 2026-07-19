@@ -1,86 +1,129 @@
 'use client'
 
 import { useApp } from '@/context/AppContext'
-import { motion } from 'framer-motion'
-import { Music, RefreshCw } from 'lucide-react'
+import { motion, AnimatePresence } from 'framer-motion'
+import { Music, RefreshCw, Headphones, BarChart3, Sparkles } from 'lucide-react'
+
+const FEATURES = [
+  { icon: BarChart3, label: 'Music DNA', desc: 'Deep acoustic analysis of your taste profile' },
+  { icon: Headphones, label: 'Listening habits', desc: 'Discovery, loyalty, and replay patterns' },
+  { icon: Sparkles, label: 'Taste Summary', desc: 'Narrative description of your sonic identity' },
+]
 
 export function LoginPage() {
   const { login, isLoggingIn } = useApp()
 
   return (
-    <div className="min-h-screen bg-background flex flex-col justify-between p-8 md:p-12 relative overflow-hidden select-none">
-      {/* Visual background lines / stark border framework */}
-      <div className="absolute inset-0 border-[16px] border-border pointer-events-none z-50" />
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[1px] h-full bg-border/40 pointer-events-none" />
-
-      {/* Header */}
-      <header className="relative z-10 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-none bg-accent flex items-center justify-center">
-            <Music className="w-4 h-4 text-accent-foreground" />
+    <div className="min-h-screen bg-background flex flex-col">
+      {/* Top header */}
+      <header className="flex items-center justify-between px-8 py-5 border-b border-border/60">
+        <div className="flex items-center gap-2.5">
+          <div className="w-7 h-7 bg-foreground rounded-lg flex items-center justify-center">
+            <Music className="w-3.5 h-3.5 text-background" />
           </div>
-          <span className="font-mono text-sm font-bold uppercase tracking-wider text-foreground">Sona Studio</span>
+          <span
+            className="text-sm font-extrabold tracking-tight text-foreground"
+            style={{ fontFamily: 'var(--font-syne), sans-serif' }}
+          >
+            Sona
+          </span>
         </div>
-        <span className="font-mono text-xs text-muted-foreground uppercase tracking-widest">Phase 2 Engine</span>
+        <span className="mono-label">Music Intelligence</span>
       </header>
 
-      {/* Hero / Sign in section */}
-      <main className="relative z-10 my-auto max-w-4xl mx-auto text-center space-y-12 py-12">
+      {/* Hero area */}
+      <main className="flex-1 flex flex-col items-center justify-center px-6 py-20 text-center">
+        {/* Badge */}
         <motion.div
-          initial={{ opacity: 0, y: 30 }}
+          initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8 }}
-          className="space-y-4"
+          transition={{ duration: 0.4 }}
+          className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-border bg-secondary text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-8"
+          style={{ fontFamily: 'var(--font-space-mono), monospace' }}
         >
-          <span className="text-xs uppercase tracking-widest text-accent font-bold font-mono block">
-            Multidimensional Taste Profile
-          </span>
-          <h1 className="text-5xl md:text-7xl lg:text-8xl font-extrabold uppercase tracking-tight text-foreground leading-[0.95]">
-            Decode Your <br />
-            Music DNA
-          </h1>
-          <p className="text-sm md:text-base text-muted-foreground font-mono max-w-xl mx-auto leading-relaxed pt-4">
-            Connect your Spotify account to run numerical matrix computations on your listening logs, genres, and track acoustic signatures.
-          </p>
+          <span className="w-1.5 h-1.5 rounded-full bg-foreground/50 inline-block" />
+          Powered by Spotify API
         </motion.div>
 
-        <motion.div
+        {/* Heading */}
+        <motion.h1
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.55, delay: 0.08 }}
+          className="text-5xl md:text-7xl font-extrabold tracking-tight text-foreground leading-[1.0] mb-5 max-w-3xl"
+          style={{ fontFamily: 'var(--font-syne), sans-serif', letterSpacing: '-0.03em' }}
+        >
+          Understand your<br />
+          <span className="text-muted-foreground">music identity.</span>
+        </motion.h1>
+
+        {/* Subtext */}
+        <motion.p
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          transition={{ delay: 0.4 }}
-          className="flex justify-center"
+          transition={{ duration: 0.5, delay: 0.2 }}
+          className="text-sm text-muted-foreground max-w-md mx-auto leading-relaxed mb-12"
+          style={{ fontFamily: 'var(--font-space-mono), monospace' }}
+        >
+          Sona analyses your Spotify listening logs, genres, and audio signals to build a multidimensional profile of your taste.
+        </motion.p>
+
+        {/* CTA */}
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.4, delay: 0.3 }}
+          className="mb-16"
         >
           <button
             onClick={login}
             disabled={isLoggingIn}
-            className="group relative border border-accent bg-accent/10 hover:bg-accent hover:text-accent-foreground text-accent font-mono font-bold text-sm tracking-wider uppercase py-4 px-10 transition-all duration-300 flex items-center gap-3 cursor-pointer"
+            className="btn-solid cursor-pointer text-sm px-8 py-4 rounded-2xl shadow-sm"
           >
             {isLoggingIn ? (
               <>
-                <motion.div
-                  animate={{ rotate: 360 }}
-                  transition={{ duration: 1.5, repeat: Infinity, ease: "linear" }}
-                >
-                  <RefreshCw className="w-4 h-4" />
-                </motion.div>
-                <span>Authorizing Spotify Session...</span>
+                <RefreshCw className="w-4 h-4 animate-spin-slow" />
+                <span>Connecting to Spotify…</span>
               </>
             ) : (
               <>
-                <span>Connect Spotify Session</span>
-                <span className="group-hover:translate-x-1 transition-transform">→</span>
+                <Music className="w-4 h-4" />
+                <span>Connect with Spotify</span>
               </>
             )}
           </button>
         </motion.div>
+
+        {/* Feature pills */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.5, delay: 0.45 }}
+          className="flex flex-col sm:flex-row gap-4 justify-center items-stretch max-w-xl mx-auto stagger"
+        >
+          {FEATURES.map((f) => (
+            <div
+              key={f.label}
+              className="animate-fade-up flex-1 bg-card border border-border rounded-2xl px-5 py-5 text-left space-y-2.5 hover:border-foreground/20 transition-colors duration-200"
+            >
+              <f.icon className="w-4 h-4 text-muted-foreground" />
+              <p className="text-xs font-extrabold text-foreground uppercase tracking-tight" style={{ fontFamily: 'var(--font-syne)' }}>
+                {f.label}
+              </p>
+              <p className="text-[11px] text-muted-foreground leading-relaxed" style={{ fontFamily: 'var(--font-space-mono)' }}>
+                {f.desc}
+              </p>
+            </div>
+          ))}
+        </motion.div>
       </main>
 
       {/* Footer */}
-      <footer className="relative z-10 flex flex-col sm:flex-row justify-between items-center gap-4 text-xs font-mono text-muted-foreground uppercase tracking-widest border-t border-border/30 pt-6">
-        <div>© 2026 Sona Studio</div>
-        <div className="flex gap-6">
-          <a href="#" className="hover:text-accent transition-colors">Privacy</a>
-          <a href="#" className="hover:text-accent transition-colors">OAuth Terms</a>
+      <footer className="px-8 py-5 border-t border-border/60 flex justify-between items-center">
+        <span className="mono-label">© 2026 Sona Studio</span>
+        <div className="flex gap-5">
+          <a href="#" className="mono-label hover:text-foreground transition-colors">Privacy</a>
+          <a href="#" className="mono-label hover:text-foreground transition-colors">Terms</a>
         </div>
       </footer>
     </div>

@@ -40,90 +40,230 @@
   --radius-md: calc(var(--radius) * 0.8);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) * 1.4);
-  --radius-2xl: calc(var(--radius) * 1.8);
-  --radius-3xl: calc(var(--radius) * 2.2);
-  --radius-4xl: calc(var(--radius) * 2.6);
 }
 
 :root {
   color-scheme: light;
-  --background: oklch(1 0 0); /* Pure White */
-  --foreground: oklch(0.09 0 0); /* Stark Charcoal */
   
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.09 0 0);
-  
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.09 0 0);
-  
-  --primary: oklch(0.09 0 0);
+  /* Core Palette — Pure, calm whites with true blacks */
+  --background:    oklch(0.99 0 0);    /* Near-pure white canvas */
+  --foreground:    oklch(0.08 0 0);    /* Deep, legible ink black */
+
+  --card:          oklch(1 0 0);       /* Pure white cards */
+  --card-foreground: oklch(0.08 0 0);
+
+  --popover:       oklch(1 0 0);
+  --popover-foreground: oklch(0.08 0 0);
+
+  --primary:       oklch(0.08 0 0);
   --primary-foreground: oklch(1 0 0);
-  
-  --secondary: oklch(0.96 0 0); /* Soft Grey */
-  --secondary-foreground: oklch(0.09 0 0);
-  
-  --muted: oklch(0.96 0 0);
-  --muted-foreground: oklch(0.45 0 0);
-  
-  --accent: oklch(0.09 0 0);
+
+  --secondary:     oklch(0.965 0 0);   /* Feather-light grey tint */
+  --secondary-foreground: oklch(0.08 0 0);
+
+  --muted:         oklch(0.97 0 0);
+  --muted-foreground: oklch(0.50 0 0); /* Comfortable, readable subtext */
+
+  --accent:        oklch(0.08 0 0);
   --accent-foreground: oklch(1 0 0);
-  
-  --destructive: oklch(0.6 0.18 20);
-  
-  --border: oklch(0.92 0 0); /* Thin elegant borders */
-  --input: oklch(0.92 0 0);
-  --ring: oklch(0.09 0 0);
-  
-  --chart-1: oklch(0.09 0 0);
+
+  --destructive:   oklch(0.55 0.2 20);
+
+  --border:        oklch(0.91 0 0);    /* Delicate, barely-visible dividers */
+  --input:         oklch(0.95 0 0);
+  --ring:          oklch(0.08 0 0);
+
+  --chart-1: oklch(0.08 0 0);
   --chart-2: oklch(0.3 0 0);
   --chart-3: oklch(0.5 0 0);
   --chart-4: oklch(0.7 0 0);
-  --chart-5: oklch(0.85 0 0);
-  
-  --radius: 0.75rem; /* Clean rounded edges */
-  
-  --sidebar: oklch(1 0 0);
-  --sidebar-foreground: oklch(0.09 0 0);
-  --sidebar-primary: oklch(0.09 0 0);
+  --chart-5: oklch(0.88 0 0);
+
+  --radius: 0.875rem;
+
+  --sidebar:           oklch(0.985 0 0);
+  --sidebar-foreground: oklch(0.08 0 0);
+  --sidebar-primary:   oklch(0.08 0 0);
   --sidebar-primary-foreground: oklch(1 0 0);
-  --sidebar-accent: oklch(0.96 0 0);
-  --sidebar-accent-foreground: oklch(0.09 0 0);
-  --sidebar-border: oklch(0.92 0 0);
-  --sidebar-ring: oklch(0.09 0 0);
+  --sidebar-accent:    oklch(0.94 0 0);
+  --sidebar-accent-foreground: oklch(0.08 0 0);
+  --sidebar-border:    oklch(0.91 0 0);
+  --sidebar-ring:      oklch(0.08 0 0);
 }
 
 @layer base {
   * {
-    @apply border-border outline-ring/50;
+    @apply border-border;
+    box-sizing: border-box;
   }
+
+  html {
+    scroll-behavior: smooth;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
   body {
-    @apply bg-background text-foreground font-mono antialiased selection:bg-foreground selection:text-background;
+    @apply bg-background text-foreground;
+    font-family: var(--font-space-mono), 'Courier New', monospace;
   }
-  h1, h2, h3, h4, h5, h6 {
-    font-family: var(--font-syne), sans-serif;
-    @apply font-extrabold uppercase tracking-tight text-foreground;
+
+  h1, h2, h3, h4 {
+    font-family: var(--font-syne), 'Helvetica Neue', sans-serif;
+    @apply font-extrabold tracking-tight text-foreground;
+    letter-spacing: -0.025em;
+  }
+
+  ::selection {
+    @apply bg-foreground text-background;
+  }
+
+  ::-webkit-scrollbar {
+    width: 4px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    @apply bg-border rounded-full;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-muted-foreground/40;
   }
 }
 
+/* ─────────────── COMPONENT TOKENS ─────────────── */
 @layer components {
-  .glass {
-    @apply bg-card border border-border rounded-xl;
+
+  /* Base card — white with a crisp border */
+  .card {
+    @apply bg-card border border-border rounded-2xl;
   }
-  
+
   .premium-card {
-    @apply bg-card rounded-xl p-5 border border-border hover:border-foreground/30 transition-all duration-200;
+    @apply bg-card border border-border rounded-2xl p-6;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
   }
-  
-  .premium-gradient {
-    @apply bg-secondary/30;
+  .premium-card:hover {
+    border-color: oklch(0.78 0 0);
+    box-shadow: 0 1px 12px oklch(0.08 0 0 / 0.05);
   }
-  
+
+  /* Sidebar navigation item */
   .sidebar-item {
-    font-family: var(--font-mono), monospace;
-    @apply flex items-center gap-3 px-4 py-3 rounded-lg text-xs uppercase font-bold text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors duration-150 cursor-pointer;
+    font-family: var(--font-space-mono), monospace;
+    @apply flex items-center gap-3 px-3 py-2.5 rounded-xl text-[11px] uppercase font-bold tracking-widest;
+    color: oklch(0.50 0 0);
+    transition: background 0.15s ease, color 0.15s ease;
   }
-  
+  .sidebar-item:hover {
+    @apply bg-secondary;
+    color: oklch(0.08 0 0);
+  }
   .sidebar-item.active {
-    @apply text-foreground bg-secondary border-none;
+    @apply bg-foreground;
+    color: oklch(1 0 0);
+  }
+
+  /* Monospace label / tag */
+  .mono-label {
+    font-family: var(--font-space-mono), monospace;
+    @apply text-[10px] font-bold uppercase tracking-widest text-muted-foreground;
+  }
+
+  /* Count badge — pill style */
+  .count-badge {
+    font-family: var(--font-space-mono), monospace;
+    @apply text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 bg-secondary border border-border rounded-full text-foreground flex-shrink-0;
+  }
+
+  /* Section title */
+  .section-title {
+    font-family: var(--font-syne), sans-serif;
+    @apply text-[11px] font-extrabold uppercase tracking-[0.15em] text-muted-foreground mb-5;
+  }
+
+  /* Horizontal rule subtle divider */
+  .divider {
+    @apply border-t border-border/60;
+  }
+
+  /* Pill button — light */
+  .btn-outline {
+    font-family: var(--font-space-mono), monospace;
+    @apply flex items-center gap-2 text-[11px] uppercase font-bold tracking-widest px-4 py-2.5 border border-border rounded-xl text-foreground bg-card;
+    transition: background 0.15s ease, border-color 0.15s ease;
+  }
+  .btn-outline:hover {
+    @apply bg-secondary border-foreground/30;
+  }
+  .btn-outline:disabled {
+    @apply opacity-50 cursor-not-allowed;
+  }
+
+  /* Solid button */
+  .btn-solid {
+    font-family: var(--font-space-mono), monospace;
+    @apply flex items-center gap-2 text-[11px] uppercase font-bold tracking-widest px-5 py-3 border border-foreground rounded-xl bg-foreground text-background;
+    transition: opacity 0.15s ease;
+  }
+  .btn-solid:hover {
+    opacity: 0.85;
+  }
+  .btn-solid:disabled {
+    @apply opacity-40 cursor-not-allowed;
+  }
+
+  /* Glassmorphic frosted topbar  */
+  .topbar {
+    @apply border-b border-border bg-background/80 backdrop-blur-lg sticky top-0 z-40;
+  }
+
+  /* Scrollable list row */
+  .list-row {
+    @apply flex items-center justify-between gap-4 px-5 py-4 rounded-2xl border border-border/80 bg-card;
+    transition: border-color 0.15s ease, background 0.15s ease;
+  }
+  .list-row:hover {
+    border-color: oklch(0.78 0 0);
+    @apply bg-secondary/40;
+  }
+
+  /* Progress bar track */
+  .progress-track {
+    @apply h-1.5 w-full bg-secondary rounded-full overflow-hidden;
+  }
+  .progress-fill {
+    @apply h-full bg-foreground rounded-full;
+    transition: width 1s ease-out;
   }
 }
+
+/* ─────────────── ANIMATIONS ─────────────── */
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes scale-in {
+  from { opacity: 0; transform: scale(0.96); }
+  to   { opacity: 1; transform: scale(1); }
+}
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.animate-fade-up   { animation: fade-up  0.5s ease forwards; }
+.animate-fade-in   { animation: fade-in  0.35s ease forwards; }
+.animate-scale-in  { animation: scale-in 0.3s ease forwards; }
+.animate-spin-slow { animation: spin     2s linear infinite; }
+
+/* Staggered child delays */
+.stagger > *:nth-child(1) { animation-delay: 0.00s; }
+.stagger > *:nth-child(2) { animation-delay: 0.06s; }
+.stagger > *:nth-child(3) { animation-delay: 0.12s; }
+.stagger > *:nth-child(4) { animation-delay: 0.18s; }
+.stagger > *:nth-child(5) { animation-delay: 0.24s; }

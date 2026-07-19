@@ -2,290 +2,193 @@
 
 import { useApp } from '@/context/AppContext'
 import { TopGenreData, TopArtistData, TopAlbumData } from '@/types/musicDNA'
-import {
-  DNAHorizontalBar,
-  DNACircularProgress,
-  DNAMetricPill,
-  DNARadialCard
-} from './DNAVisualization'
+import { DNAHorizontalBar, DNACircularProgress, DNAMetricPill, DNARadialCard } from './DNAVisualization'
 import { MusicHabits } from './MusicHabits'
 import { TasteSummaryView } from './TasteSummaryView'
 import { motion } from 'framer-motion'
 import { RefreshCw, Music, Disc, User, Activity } from 'lucide-react'
-import { Button } from '@/components/ui/button'
 
 export function ProfileView() {
   const { profile, tracks, refreshDNA, isRefreshingDNA: isRefreshing } = useApp()
 
   if (!profile || tracks.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
-        <motion.div
-          animate={{ rotate: 360 }}
-          transition={{ duration: 1.5, repeat: Infinity, ease: "linear" }}
-        >
-          <RefreshCw className="w-8 h-8 text-foreground/40" />
-        </motion.div>
-        <p className="text-muted-foreground animate-pulse text-xs font-mono">Loading Music DNA Profile...</p>
+      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4 animate-fade-in">
+        <RefreshCw className="w-7 h-7 text-muted-foreground/40 animate-spin-slow" />
+        <p className="mono-label animate-pulse">Loading Music DNA…</p>
       </div>
     )
   }
 
-  // 1. Calculate Top Genres
-  const genrePlays: { [name: string]: number } = {}
+  /* ── Genre map ── */
+  const genrePlays: Record<string, number> = {}
   let totalPlays = 0
-  tracks.forEach(track => {
-    track.genres.forEach(genre => {
-      genrePlays[genre] = (genrePlays[genre] || 0) + track.playCount
-      totalPlays += track.playCount
+  tracks.forEach(t => {
+    t.genres.forEach(g => {
+      genrePlays[g] = (genrePlays[g] || 0) + t.playCount
+      totalPlays += t.playCount
     })
   })
-  
   const topGenres: TopGenreData[] = Object.keys(genrePlays)
-    .map(name => ({
-      name,
-      playCount: genrePlays[name],
-      percentage: Math.round((genrePlays[name] / Math.max(1, totalPlays)) * 100)
-    }))
+    .map(name => ({ name, playCount: genrePlays[name], percentage: Math.round((genrePlays[name] / Math.max(1, totalPlays)) * 100) }))
     .sort((a, b) => b.playCount - a.playCount)
-    .slice(0, 5)
+    .slice(0, 6)
 
-  // 2. Calculate Top Artists
-  const artistMap: { [id: string]: { name: string; playCount: number; genre: string; imageUrl: string } } = {}
-  tracks.forEach(track => {
-    if (track.artistId) {
-      if (!artistMap[track.artistId]) {
-        artistMap[track.artistId] = {
-          name: track.artistName,
-          playCount: 0,
-          genre: track.genres[0] || 'pop',
-          imageUrl: track.artistImageUrl || ''
-        }
-      }
-      artistMap[track.artistId].playCount += track.playCount
-    }
+  /* ── Artist map ── */
+  const artistMap: Record<string, { name: string; playCount: number; genre: string; imageUrl: string }> = {}
+  tracks.forEach(t => {
+    if (!t.artistId) return
+    if (!artistMap[t.artistId]) artistMap[t.artistId] = { name: t.artistName, playCount: 0, genre: t.genres[0] || '', imageUrl: t.artistImageUrl || '' }
+    artistMap[t.artistId].playCount += t.playCount
   })
-  
-  const topArtists: TopArtistData[] = Object.keys(artistMap)
-    .map(id => ({
-      id,
-      name: artistMap[id].name,
-      subtitle: artistMap[id].genre,
-      count: `${artistMap[id].playCount} plays`,
-      playCount: artistMap[id].playCount,
-      imageUrl: artistMap[id].imageUrl
-    }))
+  const topArtists: TopArtistData[] = Object.entries(artistMap)
+    .map(([id, v]) => ({ id, name: v.name, subtitle: v.genre, count: `${v.playCount} plays`, playCount: v.playCount, imageUrl: v.imageUrl }))
     .sort((a, b) => b.playCount - a.playCount)
-    .slice(0, 3)
+    .slice(0, 4)
 
-  // 3. Calculate Top Albums
-  const albumMap: { [id: string]: { name: string; playCount: number; artist: string; imageUrl: string } } = {}
-  tracks.forEach(track => {
-    if (track.albumId) {
-      if (!albumMap[track.albumId]) {
-        albumMap[track.albumId] = {
-          name: track.albumName,
-          playCount: 0,
-          artist: track.artistName,
-          imageUrl: track.imageUrl || ''
-        }
-      }
-      albumMap[track.albumId].playCount += track.playCount
-    }
+  /* ── Album map ── */
+  const albumMap: Record<string, { name: string; playCount: number; artist: string; imageUrl: string }> = {}
+  tracks.forEach(t => {
+    if (!t.albumId) return
+    if (!albumMap[t.albumId]) albumMap[t.albumId] = { name: t.albumName, playCount: 0, artist: t.artistName, imageUrl: t.imageUrl || '' }
+    albumMap[t.albumId].playCount += t.playCount
   })
-  
-  const topAlbums: TopAlbumData[] = Object.keys(albumMap)
-    .map(id => ({
-      id,
-      name: albumMap[id].name,
-      subtitle: albumMap[id].artist,
-      count: `${albumMap[id].playCount} plays`,
-      playCount: albumMap[id].playCount,
-      imageUrl: albumMap[id].imageUrl
-    }))
+  const topAlbums: TopAlbumData[] = Object.entries(albumMap)
+    .map(([id, v]) => ({ id, name: v.name, subtitle: v.artist, count: `${v.playCount} plays`, playCount: v.playCount, imageUrl: v.imageUrl }))
     .sort((a, b) => b.playCount - a.playCount)
-    .slice(0, 3)
+    .slice(0, 4)
 
   return (
-    <div className="space-y-12">
-      {/* Header and Refresh Action */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 pb-6 border-b border-border/30">
+    <div className="space-y-12 animate-fade-up">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
         <div>
-          <h2 className="text-3xl font-extrabold tracking-tight mb-2 text-foreground uppercase">Music DNA</h2>
-          <p className="text-xs text-muted-foreground font-mono">
-            A multidimensional representation of your musical identity calculated from play logs.
-          </p>
+          <h2 className="text-2xl font-extrabold tracking-tight text-foreground mb-1" style={{ fontFamily: 'var(--font-syne)', letterSpacing: '-0.03em' }}>
+            Music DNA
+          </h2>
+          <p className="mono-label">Multidimensional analysis of your sonic identity.</p>
         </div>
-        <Button
-          onClick={refreshDNA}
-          disabled={isRefreshing}
-          className="relative border border-border hover:bg-secondary/60 text-foreground font-mono font-bold text-xs uppercase tracking-wider py-2 px-6 rounded-xl min-w-[180px] self-start sm:self-auto cursor-pointer"
-        >
+        <button onClick={refreshDNA} disabled={isRefreshing} className="btn-outline self-start sm:self-auto cursor-pointer">
           {isRefreshing ? (
-            <>
-              <motion.div
-                animate={{ rotate: 360 }}
-                transition={{ duration: 1.5, repeat: Infinity, ease: "linear" }}
-              >
-                <RefreshCw className="w-3.5 h-3.5" />
-              </motion.div>
-              <span>Recalculating...</span>
-            </>
+            <><motion.div animate={{ rotate: 360 }} transition={{ duration: 1.5, repeat: Infinity, ease: 'linear' }}><RefreshCw className="w-3.5 h-3.5" /></motion.div>Recalculating…</>
           ) : (
-            <>
-              <RefreshCw className="w-3.5 h-3.5" />
-              <span>Refresh Music DNA</span>
-            </>
+            <><RefreshCw className="w-3.5 h-3.5" />Refresh DNA</>
           )}
-        </Button>
+        </button>
       </div>
 
-      {/* Main DNA Grid */}
-      <section className="space-y-6">
-        {/* Metric Pills */}
-        <div className="flex flex-wrap gap-3">
-          <DNAMetricPill label="Acousticness" value={`${profile.acousticness}%`} icon={<Music className="w-3.5 h-3.5" />} />
-          <DNAMetricPill label="Electronic" value={`${profile.electronic}%`} icon={<Activity className="w-3.5 h-3.5" />} />
-          <DNAMetricPill label="Tempo preference" value={profile.tempo_preference > 65 ? 'High (Upbeat)' : profile.tempo_preference < 35 ? 'Low (Chill)' : 'Balanced'} icon={<Activity className="w-3.5 h-3.5" />} />
-          <DNAMetricPill label="Darkness" value={`${profile.darkness}%`} icon={<Disc className="w-3.5 h-3.5" />} />
+      {/* Key metric circles */}
+      <div>
+        <p className="section-title">Core metrics</p>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+          {[
+            { label: 'Energy', value: profile.energy, delay: 0 },
+            { label: 'Melancholy', value: profile.melancholy, delay: 0.06 },
+            { label: 'Atmospheric', value: profile.atmospheric, delay: 0.12 },
+            { label: 'Complexity', value: profile.complexity, delay: 0.18 },
+          ].map(m => (
+            <DNACircularProgress key={m.label} label={m.label} value={m.value} size={110} strokeWidth={5} delay={m.delay} />
+          ))}
         </div>
+      </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <DNACircularProgress label="Energy" value={profile.energy} strokeWidth={6} size={110} delay={0.05} />
-          <DNACircularProgress label="Melancholy" value={profile.melancholy} strokeWidth={6} size={110} color="var(--accent)" delay={0.1} />
-          <DNACircularProgress label="Atmospheric" value={profile.atmospheric} strokeWidth={6} size={110} color="var(--accent)" delay={0.15} />
-          <DNACircularProgress label="Complexity" value={profile.complexity} strokeWidth={6} size={110} color="var(--accent)" delay={0.2} />
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      {/* Experimental & Loyalty */}
+      <div>
+        <p className="section-title">Taste characteristics</p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <DNARadialCard
             title="Experimental vs Mainstream"
-            description="Measures your affinity for avant-garde arrangements and outlier genres vs billboard sensations."
+            description="Affinity for avant-garde and outlier genres versus chart-toppers."
             value={profile.experimental}
-            delay={0.25}
+            delay={0.1}
           />
           <DNARadialCard
-            title="Loyalty Coefficient"
-            description="Calculates how deeply you invest in particular artist discographies over time."
+            title="Artist Loyalty"
+            description="Depth of investment in particular artist discographies over time."
             value={Math.round((profile.replay_rate + profile.album_listener) / 2)}
-            delay={0.3}
+            delay={0.16}
           />
         </div>
-      </section>
+      </div>
 
-      {/* Grid for Genres & Summary */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      {/* Genres & Summary side by side */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Top Genres */}
-        <section className="premium-card bg-card border border-border/80 p-6 rounded-xl space-y-6">
-          <h3 className="text-base font-bold flex items-center gap-2 uppercase tracking-tight">
-            <Music className="w-4 h-4" />
-            Top Genres
-          </h3>
-          <div className="space-y-6">
-            {topGenres.map((g, idx) => (
+        <div className="premium-card space-y-5">
+          <p className="section-title mb-0">Top Genres</p>
+          <div className="space-y-5">
+            {topGenres.map((g, i) => (
               <DNAHorizontalBar
                 key={g.name}
                 label={g.name}
                 value={g.percentage}
-                delay={idx * 0.05}
-                colorClass={idx === 0 ? "from-foreground to-foreground/60" : "from-muted-foreground/30 to-muted-foreground/10"}
+                delay={i * 0.04}
+                colorClass={i === 0 ? 'from-foreground to-foreground/70' : 'from-muted-foreground/40 to-muted-foreground/10'}
               />
             ))}
           </div>
-        </section>
+        </div>
 
-        {/* Taste Summary */}
+        {/* Taste summary */}
         <TasteSummaryView profile={profile} />
       </div>
 
-      {/* Top Artists & Albums */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-        {/* Top Artists */}
-        <section className="space-y-6">
-          <h3 className="text-base font-bold flex items-center gap-2 uppercase tracking-tight">
-            <User className="w-4 h-4" />
-            Top Artists
-          </h3>
-          <div className="space-y-3">
-            {topArtists.map((artist) => (
-              <div
-                key={artist.id}
-                className="premium-card flex items-center justify-between hover:bg-secondary/40 rounded-xl p-4 border border-border/80 transition-all duration-200 cursor-pointer"
-              >
-                <div className="flex items-center gap-4">
-                  {artist.imageUrl ? (
-                    <img
-                      src={artist.imageUrl}
-                      alt={artist.name}
-                      className="w-12 h-12 object-cover rounded-full border border-border/30"
-                    />
-                  ) : (
-                    <div className="w-12 h-12 bg-secondary/50 rounded-full flex items-center justify-center border border-border/30">
-                      <User className="w-5 h-5 text-muted-foreground/30" />
-                    </div>
-                  )}
-                  <div>
-                    <h4 className="font-bold text-foreground text-sm uppercase leading-tight">{artist.name}</h4>
-                    <p className="text-xs text-muted-foreground mt-0.5 capitalize">{artist.subtitle}</p>
+      {/* Artists & Albums */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+        {/* Artists */}
+        <div>
+          <p className="section-title">Top Artists</p>
+          <div className="space-y-2">
+            {topArtists.map(artist => (
+              <div key={artist.id} className="list-row cursor-pointer">
+                {artist.imageUrl ? (
+                  <img src={artist.imageUrl} alt={artist.name} className="w-10 h-10 rounded-full object-cover border border-border/60 flex-shrink-0" />
+                ) : (
+                  <div className="w-10 h-10 rounded-full bg-secondary border border-border flex items-center justify-center flex-shrink-0">
+                    <User className="w-4 h-4 text-muted-foreground/30" />
                   </div>
+                )}
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-bold text-foreground truncate" style={{ fontFamily: 'var(--font-syne)', textTransform: 'none' }}>{artist.name}</p>
+                  <p className="text-[10px] text-muted-foreground font-mono truncate capitalize">{artist.subtitle}</p>
                 </div>
-                <span className="text-xs text-muted-foreground font-mono font-bold bg-secondary border border-border px-3 py-1 rounded-lg">
-                  {artist.count}
-                </span>
+                <span className="count-badge flex-shrink-0">{artist.count}</span>
               </div>
             ))}
           </div>
-        </section>
+        </div>
 
-        {/* Top Albums */}
-        <section className="space-y-6">
-          <h3 className="text-base font-bold flex items-center gap-2 uppercase tracking-tight">
-            <Disc className="w-4 h-4" />
-            Top Albums
-          </h3>
-          <div className="space-y-3">
-            {topAlbums.map((album) => (
-              <div
-                key={album.id}
-                className="premium-card flex items-center justify-between hover:bg-secondary/40 rounded-xl p-4 border border-border/80 transition-all duration-200 cursor-pointer"
-              >
-                <div className="flex items-center gap-4">
-                  {album.imageUrl ? (
-                    <img
-                      src={album.imageUrl}
-                      alt={album.name}
-                      className="w-12 h-12 object-cover rounded-lg border border-border/30"
-                    />
-                  ) : (
-                    <div className="w-12 h-12 bg-secondary/50 rounded-lg flex items-center justify-center border border-border/30">
-                      <Disc className="w-5 h-5 text-muted-foreground/30" />
-                    </div>
-                  )}
-                  <div>
-                    <h4 className="font-bold text-foreground text-sm uppercase leading-tight">{album.name}</h4>
-                    <p className="text-xs text-muted-foreground mt-0.5">{album.subtitle}</p>
+        {/* Albums */}
+        <div>
+          <p className="section-title">Top Albums</p>
+          <div className="space-y-2">
+            {topAlbums.map(album => (
+              <div key={album.id} className="list-row cursor-pointer">
+                {album.imageUrl ? (
+                  <img src={album.imageUrl} alt={album.name} className="w-10 h-10 rounded-xl object-cover border border-border/60 flex-shrink-0" />
+                ) : (
+                  <div className="w-10 h-10 rounded-xl bg-secondary border border-border flex items-center justify-center flex-shrink-0">
+                    <Disc className="w-4 h-4 text-muted-foreground/30" />
                   </div>
+                )}
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-bold text-foreground truncate" style={{ fontFamily: 'var(--font-syne)', textTransform: 'none' }}>{album.name}</p>
+                  <p className="text-[10px] text-muted-foreground font-mono truncate">{album.subtitle}</p>
                 </div>
-                <span className="text-xs text-muted-foreground font-mono font-bold bg-secondary border border-border px-3 py-1 rounded-lg">
-                  {album.count}
-                </span>
+                <span className="count-badge flex-shrink-0">{album.count}</span>
               </div>
             ))}
           </div>
-        </section>
+        </div>
       </div>
 
-      {/* Listening Habits */}
-      <section className="space-y-6">
-        <h3 className="text-base font-bold flex items-center gap-2 uppercase tracking-tight">
-          <Activity className="w-4 h-4" />
-          Listening Habits
-        </h3>
+      {/* Habits */}
+      <div>
+        <p className="section-title">Listening Habits</p>
         <MusicHabits profile={profile} />
-      </section>
+      </div>
 
-      {/* Spacer */}
-      <div className="h-10" />
+      <div className="h-8" />
     </div>
   )
 }
