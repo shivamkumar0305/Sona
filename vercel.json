@@ -1,3 +1,6 @@
 {
+  "buildCommand": "npm run build",
+  "installCommand": "npm install --package-lock=false --legacy-peer-deps",
+  "outputDirectory": ".next",
   "framework": "nextjs"
 }

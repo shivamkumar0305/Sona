@@ -118,6 +118,22 @@ function cachedRecentHaveMissingImages(tracks: SpotifyRecentTrack[] | null): boo
   return tracks.some((track) => !track.imageUrl?.trim())
 }
 
+function getSiteOrigin(): string {
+  const configuredUrl = process.env.NEXT_PUBLIC_SITE_URL?.trim()
+  if (configuredUrl) return configuredUrl.replace(/\/$/, '')
+
+  if (typeof window !== 'undefined') {
+    return window.location.origin
+  }
+
+  return ''
+}
+
+function getAuthRedirectUrl(): string {
+  const origin = getSiteOrigin()
+  return `${origin}/auth/callback`
+}
+
 export function AppProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<UserSession | null>(null)
   const [isLoggingIn, setIsLoggingIn] = useState(false)
@@ -256,7 +272,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         provider: 'spotify',
         options: {
           scopes: 'user-read-email user-top-read user-read-recently-played',
-          redirectTo: window.location.origin
+          redirectTo: getAuthRedirectUrl()
         }
       })
       if (error) {

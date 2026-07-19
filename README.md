@@ -33,11 +33,12 @@ Open `http://127.0.0.1:3000`.
 
 ## Environment Variables
 
-Create `frontend/.env.local` for Spotify OAuth-backed sync:
+Create `.env.local` for Spotify OAuth-backed sync:
 
 ```bash
 NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+NEXT_PUBLIC_SITE_URL=http://127.0.0.1:3000
 ```
 
 In Supabase, enable Spotify as an auth provider and include these Spotify scopes:
@@ -46,12 +47,24 @@ In Supabase, enable Spotify as an auth provider and include these Spotify scopes
 user-read-email user-top-read user-read-recently-played
 ```
 
+Add these redirect URLs in Supabase Auth settings:
+
+```text
+http://127.0.0.1:3000/auth/callback
+https://your-vercel-domain.vercel.app/auth/callback
+```
+
+In Vercel, set `NEXT_PUBLIC_SITE_URL` to your deployed domain, for example:
+
+```text
+https://your-vercel-domain.vercel.app
+```
+
 Without these variables, Sona runs in local simulator mode.
 
 ## Scripts
 
 ```bash
-cd frontend
 pnpm dev
 pnpm lint
 pnpm build
@@ -62,11 +75,12 @@ pnpm start
 
 ## Deploy
 
-The repo includes `vercel.json`, so Vercel can deploy from the repository root while building the `frontend` app.
+The repo includes `vercel.json`, so Vercel can deploy from the repository root.
 
 Before deploying, set the same Supabase environment variables in Vercel:
 
 - `NEXT_PUBLIC_SUPABASE_URL`
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+- `NEXT_PUBLIC_SITE_URL`
 
 Then deploy normally from Vercel or push to the connected GitHub repository.
