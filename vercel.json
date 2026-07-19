@@ -1,6 +1,6 @@
 {
-  "buildCommand": "corepack enable && corepack prepare pnpm@11.7.0 --activate && cd frontend && pnpm build",
-  "installCommand": "corepack enable && corepack prepare pnpm@11.7.0 --activate && cd frontend && pnpm install --no-frozen-lockfile",
+  "buildCommand": "cd frontend && npm run build",
+  "installCommand": "cd frontend && npm install --package-lock=false --legacy-peer-deps",
   "outputDirectory": "frontend/.next",
   "framework": "nextjs"
 }
