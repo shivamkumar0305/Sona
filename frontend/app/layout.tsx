@@ -19,18 +19,24 @@ const spaceMono = Space_Mono({
 export const metadata: Metadata = {
   title: 'Sona - Premium Music Dashboard',
   description: 'Your premium music listening experience with real-time stats and insights',
-  generator: 'v0.app',
   icons: {
     icon: [
       {
         url: '/icon-dark-32x32.png',
         media: '(prefers-color-scheme: dark)',
+        type: 'image/png',
       },
       {
-        url: '/icon.svg',
-        type: 'image/svg+xml',
+        url: '/icon-light-32x32.png',
+        media: '(prefers-color-scheme: light)',
+        type: 'image/png',
+      },
+      {
+        url: '/sona-icon.png',
+        type: 'image/png',
       },
     ],
+    apple: '/apple-icon.png',
   },
 }
 
@@ -57,5 +63,4 @@ export default function RootLayout({
     </html>
   )
 }
-
 
